@@ -1,5 +1,34 @@
 #!/usr/bin/env python
 
+# Basic maze: 40x24, rightmost 7 cols are the score area
+#
+# 00 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_______
+# 01 X/----T----T----T----T----T----\X_______
+# 02 X|XXXX|XXXX|XXXX|XXXX|XXXX|XXXX|X_______
+# 03 X|XXXX|XXXX|XXXX|XXXX|XXXX|XXXX|X_______
+# 04 X|XXXX|XXXX|XXXX|XXXX+----+XXXX|X_______
+# 05 X|XXXX|XXXX+----+XXXX|XXXX+----+X_______
+# 06 X|XXXX|XXXX|XXXX+----+XXXX|XXXX|X_______
+# 07 X|XXXX+----+XXXX|XXXX|XXXX|XXXX|X_______
+# 08 X+----+XXXX+----+XXXX|XXXX|XXXX|X_______
+# 09 X|XXXX|XXXX|XXXX|XXXX+----+XXXX|X_______
+# 10 X|XXXX+----+XXXX|XXXX|XXXX+----+X_______
+# 11 X|XXXX|XXXX|XXXX+----+XXXX|XXXX|X_______
+# 12 X+----+XXXX|XXXX|XXXX|XXXX|XXXX|X_______
+# 13 X|XXXX+----+XXXX|XXXX|XXXX|XXXX|X_______
+# 14 X|XXXX|XXXX+----+XXXX+----+XXXX|X_______
+# 15 X|XXXX|XXXX|XXXX|XXXX|XXXX+----+X_______
+# 16 X|XXXX|XXXX|XXXX+----+XXXX|XXXX|X_______
+# 17 X|XXXX+----+XXXX|XXXX|XXXX|XXXX|X_______
+# 18 X+----+XXXX+----+XXXX|XXXX+----+X_______
+# 19 X|XXXX|XXXX|XXXX|XXXX+----+XXXX|X_______
+# 20 X|XXXX+----+XXXX+----+XXXX|XXXX|X_______
+# 21 X|XXXX|XXXX|XXXX|XXXX|XXXX|XXXX|X_______
+# 22 X\----^----^----^----^----^----/X_______
+# 23 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_______
+
+import random
+
 import numpy as np
 
 maze = np.empty((24, 33), dtype=np.uint8)
@@ -10,6 +39,7 @@ tileright = 0x4
 tileleft= 0x8
 tiledot = 0x10
 
+# up/down/left/right would be 0xf, but this is not legal for ghost legs
 tilechars = [
     "X",  # illegal
     "X",
@@ -119,6 +149,44 @@ def setvpath(col):
     addr = getrow(y)
     addr[x] = vpath_bot_tile[col]
 
+
+# Return a random number between 3 and 6 (inclusive) to represent next row that
+# contains an hpath. 3 is the minimum number so that if necessary, the last
+# spacing on the bottom can be adjusted upward by 1 to guarantee no cross-
+# throughs
+def get_rand_spacing():
+    return random.randint(3, 6)
+
+# Using col and col - 1, find hpaths such that there are no hpaths that meet at
+# the same row in the column col + 1, preventing any "+" intersections (which
+# is not legal ghost legs)
+def sethpath(col):
+    x1_save = vpath_cols[col - 1]
+    x2 = vpath_cols[col]
+    y = mazetoprow + 1  # first blank row below the top row
+    y += get_rand_spacing()
+    while y < mazebotrow - 1:
+        addr = getrow(y)
+
+        # If not working on the rightmost column, check to see there are
+        # no cross-throughs.
+        if col < vpath_num - 1:
+            tile = addr[x2]
+            if tile & tileright:
+                print "at y=%d on col %d, found same hpath level at col %d" % (y, col, col + 1)
+                y -= 1
+                addr = getrow(y)
+
+        x = x1_save
+        addr[x] = tiledot|tileup|tiledown|tileright
+        x += 1
+        while x < x2:
+            addr[x] = tiledot|tileleft|tileright
+            x += 1
+        addr[x2] = tiledot|tileup|tiledown|tileleft
+        y += get_rand_spacing()
+
+
 def init_maze():
     clear_maze()
     setrow(mazetoprow)
@@ -128,6 +196,12 @@ def init_maze():
     counter -= 1
     while counter >= 0:
         setvpath(counter)
+        counter -= 1
+
+    counter = vpath_num
+    counter -= 1
+    while counter > 0:  # note >, not >=
+        sethpath(counter)
         counter -= 1
 
 
@@ -146,6 +220,11 @@ def print_maze():
     for i in range(24):
         print "%02d %s" % (i, lines[i])
 
+def print_screen():
+    lines = get_text_maze()
+    for i in range(24):
+        print "%02d %s_______" % (i, lines[i])
+
 def main():
     init_maze()
     print_maze()
@@ -153,4 +232,5 @@ def main():
 
 
 if __name__ == "__main__":
+    #random.seed(31415)
     main()
