@@ -33,6 +33,10 @@ import numpy as np
 
 maze = np.empty((24, 33), dtype=np.uint8)
 
+level = -1
+level_enemies = [255, 3, 4, 5, 6, 7]  # starts counting from 1, so dummy zeroth level info
+level_speeds = [255, 0, 0, 0, 0, 0]
+
 tiledown = 0x1
 tileup = 0x2
 tileright = 0x4
@@ -75,6 +79,9 @@ tilechars = [
     "T",  # 13: left/right/down
     "^",  # 14: left/right/up
     "X",
+
+    "@",  # 32: enemy (temporary)
+    "$",  # 33: player
 ]
 
 # Screen has rows 0 - 23
@@ -225,8 +232,102 @@ def print_screen():
     for i in range(24):
         print "%02d %s_______" % (i, lines[i])
 
+# Hardcoded, up to 7 enemies because there are max of 7 vpaths
+max_enemies = 7
+cur_enemies = -1
+enemy_col = [0, 0, 0, 0, 0, 0, 0]  # current tile column
+enemy_row = [0, 0, 0, 0, 0, 0, 0]  # current tile row
+enemy_updown = [0, 0, 0, 0, 0, 0, 0]  # preferred direction
+enemy_dir = [0, 0, 0, 0, 0, 0, 0]  # actual direction
+
+# Hardcoded, up to 4 players
+max_players = 4
+cur_players = 1
+player_col = [0, 0, 0, 0]  # current tile col
+player_row = [0, 0, 0, 0]  # current tile row
+player_input_dir = [0, 0, 0, 0]  # current joystick input direction
+player_dir = [0, 0, 0, 0]  # current movement direction
+
+level_start_col = [
+    [255, 255, 255, 255],
+    [3, 0, 0, 0],
+    [2, 4, 0, 0],
+    [1, 3, 5, 0],
+    [0, 2, 4, 6],
+]
+
+# Get random starting columns for enemies by swapping elements in a list
+# several times
+def get_col_randomizer():
+    r = [0, 1, 2, 3, 4, 5, 6]
+    x = 10
+    while x >= 0:
+        i1 = random.randint(0, 6)
+        i2 = random.randint(0, 6)
+        old1 = r[i1]
+        r[i1] = r[i2]
+        r[i2] = old1
+        x -= 1
+    return r
+
+def init_enemies():
+    x = 0
+    randcol = get_col_randomizer()
+    while x < cur_enemies:
+        enemy_col[x] = randcol[x]
+        enemy_row[x] = mazetoprow
+        enemy_updown[x] = tiledown
+        enemy_dir[x] = tiledown
+        x += 1
+
+def draw_enemies():
+    i = 0
+    while i < cur_enemies:
+        y = enemy_row[i]
+        addr = getrow(y)
+        x = enemy_col[i]
+        x = vpath_cols[x]
+        addr[x] = 32
+        i += 1
+
+def get_col_start():
+    addr = level_start_col[cur_players]
+    return addr
+
+def init_players():
+    x = 0
+    start = get_col_start()
+    while x < cur_players:
+        player_col[x] = start[x]
+        player_row[x] = mazebotrow
+        player_input_dir[x] = 0
+        player_dir[x] = 0
+        x += 1
+
+def draw_players():
+    i = 0
+    while i < cur_players:
+        y = player_row[i]
+        addr = getrow(y)
+        x = player_col[i]
+        x = vpath_cols[x]
+        addr[x] = 33
+        i += 1
+
 def main():
+    global level, cur_enemies, cur_players
+
     init_maze()
+    print_maze()
+
+    level = 1
+    cur_enemies = level_enemies[level]
+    cur_players = 1
+    init_enemies()
+    init_players()
+
+    draw_enemies()
+    draw_players()
     print_maze()
 
 
