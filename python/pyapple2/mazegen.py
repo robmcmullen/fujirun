@@ -40,6 +40,11 @@ import random
 
 import numpy as np
 
+# Zero page
+r = 0
+c = 0
+round_robin_index = [0, 0]  # down, up
+
 maze = np.empty((24, 33), dtype=np.uint8)
 
 level = -1
@@ -57,40 +62,40 @@ tiledot = 0x10
 
 # up/down/left/right would be 0xf, but this is not legal for ghost legs
 tilechars = [
-    "X",  # illegal
-    "X",
-    "X",
+    "x",  # illegal
+    "x",
+    "x",
     "|",  # 3: up/down
-    "X",
+    "x",
     "/",  # 5: down/right
     "\\",  # 6: up/right
     "+",  # 7: up/down/right
-    "X",
+    "x",
     "\\",  # 9: left/down
     "/",  # 10: left/up
     "+",  # 11: left/up/down
     "-",  # 12: left/right
     "T",  # 13: left/right/down
     "^",  # 14: left/right/up
-    "X",
+    "x",
 
     # And same again, with dots
-    "X",  # illegal
-    "X",
-    "X",
+    "x",  # illegal
+    "x",
+    "x",
     "|",  # 3: up/down
-    "X",
+    "x",
     "/",  # 5: down/right
     "\\",  # 6: up/right
     "+",  # 7: up/down/right
-    "X",
+    "x",
     "\\",  # 9: left/down
     "/",  # 10: left/up
     "+",  # 11: left/up/down
     "-",  # 12: left/right
     "T",  # 13: left/right/down
     "^",  # 14: left/right/up
-    "X",
+    "x",
 
     "@",  # 32: enemy (temporary)
     "$",  # 33: player
@@ -224,34 +229,60 @@ def init_maze():
         counter -= 1
 
 
-def get_text_maze():
+def get_text_maze(m):
     lines = []
     for y in range(24):
         line = ""
         for x in range(33):
-            tile = maze[y][x]
-            line += tilechars[tile]
+            tile = m[y][x]
+            if tile < 32:
+                line += tilechars[tile]
+            else:
+                line += chr(tile)
         lines.append(line)
     return lines
 
-def print_maze():
-    lines = get_text_maze()
+enemy_history = [[], [], [], [], [], [], []]
+player_history = [[], [], [], []]
+
+def print_maze(append=""):
+    m = maze.copy()
+
+    # Loop by time history instead of by enemy number so enemy #1 doesn't
+    # always overwrite enemy #0's trail
+    remain = True
+    index = 0
+    while remain:
+        remain = False
+        for i in range(cur_enemies):
+            if index < len(enemy_history[i]):
+                remain = True
+                r, c = enemy_history[i][index]
+                m[r][c] = ord("0") + i
+        for i in range(cur_players):
+            if index < len(player_history[i]):
+                remain = True
+                r, c = player_history[i][index]
+                m[r][c] = ord("$") + i
+        index += 1
+    lines = get_text_maze(m)
     for i in range(24):
-        print "%02d %s" % (i, lines[i])
+        print "%02d %s%s" % (i, lines[i], append)
 
 def print_screen():
-    lines = get_text_maze()
-    for i in range(24):
-        print "%02d %s_______" % (i, lines[i])
+    print_maze("_______")
 
-# Hardcoded, up to 7 enemies because there are max of 7 vpaths
-max_enemies = 7
+# Hardcoded, up to 8 enemies because there are max of 7 vpaths + 1 orbiter
+max_enemies = 8
 cur_enemies = -1
-enemy_col = [0, 0, 0, 0, 0, 0, 0]  # current tile column
-enemy_row = [0, 0, 0, 0, 0, 0, 0]  # current tile row
-enemy_updown = [0, 0, 0, 0, 0, 0, 0]  # preferred direction
-enemy_dir = [0, 0, 0, 0, 0, 0, 0]  # actual direction
-enemy_last_horz = [0, 0, 0, 0, 0, 0, 0]  # last horizontal direction
+enemy_col = [0, 0, 0, 0, 0, 0, 0, 0]  # current tile column
+enemy_row = [0, 0, 0, 0, 0, 0, 0, 0]  # current tile row
+enemy_updown = [0, 0, 0, 0, 0, 0, 0, 0]  # preferred direction
+enemy_dir = [0, 0, 0, 0, 0, 0, 0, 0]  # actual direction
+enemy_target_col = [0, 0, 0, 0, 0, 0, 0, 0]  # target column at bot or top T
+
+round_robin_up = [0, 0, 0, 0, 0, 0, 0]
+round_robin_down = [0, 0, 0, 0, 0, 0, 0]
 
 # Hardcoded, up to 4 players
 max_players = 4
@@ -273,10 +304,13 @@ level_start_col = [
 def get_rand7():
     return random.randint(0, 6)
 
+def get_rand_byte():
+    return random.randint(0, 255)
+
 # Get random starting columns for enemies by swapping elements in a list
 # several times
 def get_col_randomizer():
-    r = [0, 1, 2, 3, 4, 5, 6]
+    r = list(vpath_cols)
     x = 10
     while x >= 0:
         i1 = get_rand7()
@@ -291,19 +325,22 @@ def init_enemies():
     x = 0
     randcol = get_col_randomizer()
     while x < cur_enemies:
-        enemy_col[x] = vpath_cols[randcol[x]]
+        enemy_col[x] = randcol[x]
         enemy_row[x] = mazetoprow
         enemy_updown[x] = tiledown
         enemy_dir[x] = tiledown
+        enemy_target_col[x] = 0  # Arbitrary, just need valid default
         x += 1
+    round_robin_up[:] = get_col_randomizer()
+    round_robin_down[:] = get_col_randomizer()
+    round_robin_index[:] = [0, 0]
 
 def draw_enemies():
     i = 0
     while i < cur_enemies:
-        y = enemy_row[i]
-        addr = getrow(y)
-        x = enemy_col[i]
-        addr[x] = 32
+        r = enemy_row[i]
+        c = enemy_col[i]
+        enemy_history[i].append((r, c))
         i += 1
 
 def get_col_start():
@@ -323,10 +360,9 @@ def init_players():
 def draw_players():
     i = 0
     while i < cur_players:
-        y = player_row[i]
-        addr = getrow(y)
-        x = player_col[i]
-        addr[x] = 33
+        r = player_row[i]
+        c = player_col[i]
+        player_history[i].append((r, c))
         i += 1
 
 # Determine which of the 4 directions is allowed at the given row, col
@@ -348,6 +384,36 @@ def get_next_tile(r, c, dir):
     else:
         print("bad direction % dir")
     return r, c
+
+# Choose a target column for the next up/down direction at a bottom or top T
+def get_next_round_robin(rr_table, x):
+    target_col = rr_table[round_robin_index[x]]
+    print "target: %d, indexes=%s, table=%s" % (target_col, str(round_robin_index), rr_table)
+    round_robin_index[x] += 1
+    if round_robin_index[x] >= vpath_num:
+        round_robin_index[x] = 0
+    return target_col
+
+# Find target column when enemy reaches top or bottom
+def get_target_col(i, c, allowed_vert):
+    if allowed_vert & tileup:
+        x = 1
+        rr_table = round_robin_up
+    else:
+        x = 0
+        rr_table = round_robin_down
+
+    target_col = get_next_round_robin(rr_table, x)
+    if target_col == c:
+        # don't go back up the same column, skip to next one
+        target_col = get_next_round_robin(rr_table, x)
+
+    if target_col < c:
+        current = tileleft
+    else:
+        current = tileright
+    enemy_target_col[i] = target_col
+    return current
 
 # Move enemy given the enemy index
 def move_enemy(i):
@@ -372,16 +438,41 @@ def move_enemy(i):
             # not at a corner)
 
             if allowed_vert:
-                # at a T junction at the top or bottom. choose L or R based on
-                # last left or right
-                current = enemy_last_horz[i]
+                # At a T junction at the top or bottom. What we do depends on
+                # which direction we approached from
 
-                # and reverse desired up/down direction
-                updown = allowed_vert
-                if allowed_vert & tileup:
-                    print("enemy %d: at bot T, new dir %x" % (i, current))
+                if current & tilevert:
+                    # approaching vertically means go L or R; choose direction
+                    # based on a round robin so the enemy doesn't go back up
+                    # the same path. Sets the target column for this enemy to
+                    # be used when approaching the T horizontally
+                    current = get_target_col(i, c, allowed_vert)
+
+                    if allowed_vert & tileup:
+                        print("enemy %d: at bot T, new dir %x, col=%d target=%d" % (i, current, c, enemy_target_col[i]))
+                    else:
+                        print("enemy %d: at top T, new dir %x, col=%d target=%d" % (i, current, c, enemy_target_col[i]))
                 else:
-                    print("enemy %d: at top T, new dir %x" % (i, current))
+                    # approaching horizontally, so check to see if this is the
+                    # vpath to use
+
+                    if enemy_target_col[i] == c:
+                        # Going vertical! Reverse desired up/down direction
+                        updown = allowed_vert
+                        current = allowed_vert
+
+                        if allowed_vert & tileup:
+                            print("enemy %d: at bot T, reached target=%d, going up" % (i, c))
+                        else:
+                            print("enemy %d: at top T, reached target=%d, going down" % (i, c))
+                    else:
+                        # skip this vertical, keep on moving
+
+                        if allowed_vert & tileup:
+                            print("enemy %d: at bot T, col=%d target=%d; skipping" % (i, c, enemy_target_col[i]))
+                        else:
+                            print("enemy %d: at top T, col=%d target=%d; skipping" % (i, c, enemy_target_col[i]))
+
             else:
                 # no up or down available, so keep marching on in the same
                 # direction.
@@ -390,34 +481,50 @@ def move_enemy(i):
         else:
             # only one horizontal dir is available
 
-            if allowed_vert & updown:
+            if allowed_vert == tilevert:
+                # At a left or right T junction...
+
                 if current & tilevert:
-                    # Moving vertially but we must take the horizontal
-                    # direction. Only a single direction is possible otherwise
-                    # it would have been caught by the allowed_horz case above.
+                    # moving vertically. Have to take the horizontal path
                     current = allowed_horz
                     print("enemy %d: taking hpath, start moving %x" % (i, current))
                 else:
-                    # Moving horizontally but that direction isn't available meaning we are at the end of an hpath. Start moving vertically again.
+                    # moving horizontally into the T, forcing a vertical turn.
+                    # Go back to preferred up/down direction
                     current = updown
                     print("enemy %d: hpath end, start moving %x" % (i, current))
-
             else:
-                # we must be at a corner, so we go the only available horz
-                # direction
-                current = allowed_horz
+                # At a corner, because this tile has exactly one vertical and
+                # one horizontal path.
 
-                # and reverse desired up/down direction
-                updown = allowed_vert
-                if allowed_vert & tileup:
-                    print("enemy %d: at bot corner, new dir %x" % (i, current))
+                if current & tilevert:
+                    # moving vertically, and because this is a corner, the
+                    # target column must be set up
+                    current = get_target_col(i, c, allowed_vert)
+
+                    if allowed_horz & tileleft:
+                        print("enemy %d: at right corner col=%d, heading left to target=%d" % (i, c, enemy_target_col[i]))
+                    else:
+                        print("enemy %d: at left corner col=%d, heading right to target=%d" % (i, c, enemy_target_col[i]))
                 else:
-                    print("enemy %d: at top corner, new dir %x" % (i, current))
+                    # moving horizontally along the top or bottom. If we get
+                    # here, the target column must also be this column
+                    current = allowed_vert
+                    updown = allowed_vert
+                    if allowed_vert & tileup:
+                        print("enemy %d: at bot corner col=%d with target %d, heading up" % (i, c, enemy_target_col[i]))
+                    else:
+                        print("enemy %d: at top corner col=%d with target=%d, heading down" % (i, c, enemy_target_col[i]))
 
-    else:
+    elif allowed_vert:
         # left or right is not available, so we must be in the middle of a
         # vpath segment. Only thing to do is keep moving
         print("enemy %d: keep moving %x" % (i, current))
+
+    else:
+        # only get here when moving into an illegal space
+        print("enemy %d: illegal move to %d,%d" % (i, r, c))
+        current = 0
 
     enemy_updown[i] = updown
     enemy_dir[i] = current
@@ -427,7 +534,7 @@ def move_player(i):
 
 def game_loop():
     count = 0
-    while count < 20:
+    while count < 100:
         print("Turn %d" % count)
         draw_enemies()
         draw_players()
