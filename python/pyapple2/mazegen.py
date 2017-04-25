@@ -36,20 +36,42 @@
 # player - joystick control
 # actor - either a player or an enemy
 
+import time
 import random
 
 import numpy as np
 
+
+##### Game loader
+
+def main():
+    global level, cur_enemies, cur_players
+
+    init_maze()
+    print_maze()
+
+    level = 1
+    cur_enemies = level_enemies[level]
+    cur_players = 1
+    init_enemies()
+    init_players()
+
+    game_loop()
+    draw_enemies()
+    draw_players()
+    print_maze()
+
+##### Memory usage
+
 # Zero page
+
 r = 0
 c = 0
 round_robin_index = [0, 0]  # down, up
 
-maze = np.empty((24, 33), dtype=np.uint8)
+# 2 byte addresses
 
-level = -1
-level_enemies = [255, 3, 4, 5, 6, 7]  # starts counting from 1, so dummy zeroth level info
-level_speeds = [255, 0, 0, 0, 0, 0]
+maze = np.empty((24, 33), dtype=np.uint8)
 
 tiledown = 0x1
 tileup = 0x2
@@ -59,6 +81,27 @@ tilehorz = tileleft | tileright
 tilevert = tileup | tiledown
 dir_mask = 0x0f
 tiledot = 0x10
+
+vpath_num = 7
+vpath_cols = [1, 6, 11, 16, 21, 26, 31]
+vpath_top_tile = [
+    tiledot|tiledown|tileright,
+    tiledot|tiledown|tileleft|tileright,
+    tiledot|tiledown|tileleft|tileright,
+    tiledot|tiledown|tileleft|tileright,
+    tiledot|tiledown|tileleft|tileright,
+    tiledot|tiledown|tileleft|tileright,
+    tiledot|tiledown|tileleft,
+    ]
+vpath_bot_tile = [
+    tiledot|tileup|tileright,
+    tiledot|tileup|tileleft|tileright,
+    tiledot|tileup|tileleft|tileright,
+    tiledot|tileup|tileleft|tileright,
+    tiledot|tileup|tileleft|tileright,
+    tiledot|tileup|tileleft|tileright,
+    tiledot|tileup|tileleft,
+    ]
 
 # up/down/left/right would be 0xf, but this is not legal for ghost legs
 tilechars = [
@@ -101,10 +144,14 @@ tilechars = [
     "$",  # 33: player
 ]
 
+
+##### Constants
+
 # Screen has rows 0 - 23
 # Maze is rows 1 - 22
 mazetoprow = 1
 mazebotrow = 22
+screenrows = 24
 
 # Screen has cols 0 - 39
 # cols 0 - 32 are the maze, of which 1 - 31 are actually used
@@ -113,45 +160,55 @@ mazebotrow = 22
 mazeleftcol = 1
 mazerightcol = 31
 mazescorecol = 33
+screencols = 40
 
-vpath_num = 7
-vpath_cols = [1, 6, 11, 16, 21, 26, 31]
-vpath_top_tile = [
-    tiledot|tiledown|tileright,
-    tiledot|tiledown|tileleft|tileright,
-    tiledot|tiledown|tileleft|tileright,
-    tiledot|tiledown|tileleft|tileright,
-    tiledot|tiledown|tileleft|tileright,
-    tiledot|tiledown|tileleft|tileright,
-    tiledot|tiledown|tileleft,
-    ]
-vpath_bot_tile = [
-    tiledot|tileup|tileright,
-    tiledot|tileup|tileleft|tileright,
-    tiledot|tileup|tileleft|tileright,
-    tiledot|tileup|tileleft|tileright,
-    tiledot|tileup|tileleft|tileright,
-    tiledot|tileup|tileleft|tileright,
-    tiledot|tileup|tileleft,
-    ]
 
+##### Utility functions
+
+# Returns address of tile in col 0 of row y
 def getrow(y):
     return maze[y]
 
+# Return a random number between 3 and 5 (inclusive) to represent next row that
+# contains an hpath. 3 is the minimum number so that if necessary, the last
+# spacing on the bottom can be adjusted upward by 1 to guarantee no cross-
+# throughs
+def get_rand_spacing():
+    return random.randint(3, 5)
+
+# Random number between 0 and 6 (inclusive) used for column starting positions
+def get_rand7():
+    return random.randint(0, 6)
+
+def get_rand_byte():
+    return random.randint(0, 255)
+
+# Get random starting columns for enemies by swapping elements in a list
+# several times
+def get_col_randomizer():
+    r = list(vpath_cols)
+    x = 10
+    while x >= 0:
+        i1 = get_rand7()
+        i2 = get_rand7()
+        old1 = r[i1]
+        r[i1] = r[i2]
+        r[i2] = old1
+        x -= 1
+    return r
+
+
+###### Level creation functions
+
 def clear_maze():
     y = 0
-    while y < 24:
+    while y < screenrows:
         addr = getrow(y)
         x = 0
         while x < mazescorecol:
             addr[x] = 0
             x += 1
         y += 1
-
-def setrow(addr, x):
-    while x < 31:
-        addr[x] = tiledot|tileleft|tileright
-        x += 1
 
 def setrow(row):
     addr = getrow(row)
@@ -173,13 +230,6 @@ def setvpath(col):
     addr = getrow(y)
     addr[x] = vpath_bot_tile[col]
 
-
-# Return a random number between 3 and 5 (inclusive) to represent next row that
-# contains an hpath. 3 is the minimum number so that if necessary, the last
-# spacing on the bottom can be adjusted upward by 1 to guarantee no cross-
-# throughs
-def get_rand_spacing():
-    return random.randint(3, 5)
 
 # Using col and col - 1, find hpaths such that there are no hpaths that meet at
 # the same row in the column col + 1, preventing any "+" intersections (which
@@ -210,18 +260,24 @@ def sethpath(col):
         addr[x2] = tiledot|tileup|tiledown|tileleft
         y += get_rand_spacing()
 
-
 def init_maze():
     clear_maze()
+
+    # Draw top and bottom; no intersections anywhere. Corners and T
+    # intesections will be placed in setvpath
     setrow(mazetoprow)
     setrow(mazebotrow)
 
+    # Draw all vpaths, including corners and top/bot T intersections
     counter = vpath_num
     counter -= 1
     while counter >= 0:
         setvpath(counter)
         counter -= 1
 
+    # Draw connectors between vpaths, starting with the rightmost column and
+    # the one immediately left of it. This is performed 6 times because it
+    # always needs a pair of columns to work with.
     counter = vpath_num
     counter -= 1
     while counter > 0:  # note >, not >=
@@ -229,48 +285,18 @@ def init_maze():
         counter -= 1
 
 
-def get_text_maze(m):
-    lines = []
-    for y in range(24):
-        line = ""
-        for x in range(33):
-            tile = m[y][x]
-            if tile < 32:
-                line += tilechars[tile]
-            else:
-                line += chr(tile)
-        lines.append(line)
-    return lines
+##### Gameplay storage
 
-enemy_history = [[], [], [], [], [], [], []]
-player_history = [[], [], [], []]
-
-def print_maze(append=""):
-    m = maze.copy()
-
-    # Loop by time history instead of by enemy number so enemy #1 doesn't
-    # always overwrite enemy #0's trail
-    remain = True
-    index = 0
-    while remain:
-        remain = False
-        for i in range(cur_enemies):
-            if index < len(enemy_history[i]):
-                remain = True
-                r, c = enemy_history[i][index]
-                m[r][c] = ord("0") + i
-        for i in range(cur_players):
-            if index < len(player_history[i]):
-                remain = True
-                r, c = player_history[i][index]
-                m[r][c] = ord("$") + i
-        index += 1
-    lines = get_text_maze(m)
-    for i in range(24):
-        print "%02d %s%s" % (i, lines[i], append)
-
-def print_screen():
-    print_maze("_______")
+level = -1
+level_enemies = [255, 3, 4, 5, 6, 7]  # starts counting from 1, so dummy zeroth level info
+level_speeds = [255, 0, 0, 0, 0, 0]  # probably needs to be 16 bit
+level_start_col = [
+    [255, 255, 255, 255],
+    [3, 0, 0, 0],
+    [2, 4, 0, 0],
+    [1, 3, 5, 0],
+    [0, 2, 4, 6],
+]
 
 # Hardcoded, up to 8 enemies because there are max of 7 vpaths + 1 orbiter
 max_enemies = 8
@@ -292,34 +318,8 @@ player_row = [0, 0, 0, 0]  # current tile row
 player_input_dir = [0, 0, 0, 0]  # current joystick input direction
 player_dir = [0, 0, 0, 0]  # current movement direction
 
-level_start_col = [
-    [255, 255, 255, 255],
-    [3, 0, 0, 0],
-    [2, 4, 0, 0],
-    [1, 3, 5, 0],
-    [0, 2, 4, 6],
-]
 
-# Random number between 0 and 6 (inclusive) used for column starting positions
-def get_rand7():
-    return random.randint(0, 6)
-
-def get_rand_byte():
-    return random.randint(0, 255)
-
-# Get random starting columns for enemies by swapping elements in a list
-# several times
-def get_col_randomizer():
-    r = list(vpath_cols)
-    x = 10
-    while x >= 0:
-        i1 = get_rand7()
-        i2 = get_rand7()
-        old1 = r[i1]
-        r[i1] = r[i2]
-        r[i2] = old1
-        x -= 1
-    return r
+##### Gameplay initialization
 
 def init_enemies():
     x = 0
@@ -335,14 +335,6 @@ def init_enemies():
     round_robin_down[:] = get_col_randomizer()
     round_robin_index[:] = [0, 0]
 
-def draw_enemies():
-    i = 0
-    while i < cur_enemies:
-        r = enemy_row[i]
-        c = enemy_col[i]
-        enemy_history[i].append((r, c))
-        i += 1
-
 def get_col_start():
     addr = level_start_col[cur_players]
     return addr
@@ -357,6 +349,17 @@ def init_players():
         player_dir[x] = 0
         x += 1
 
+
+##### Drawing routines
+
+def draw_enemies():
+    i = 0
+    while i < cur_enemies:
+        r = enemy_row[i]
+        c = enemy_col[i]
+        enemy_history[i].append((r, c))
+        i += 1
+
 def draw_players():
     i = 0
     while i < cur_players:
@@ -365,13 +368,16 @@ def draw_players():
         player_history[i].append((r, c))
         i += 1
 
+
+##### Game logic
+
 # Determine which of the 4 directions is allowed at the given row, col
 def get_allowed_dirs(r, c):
     addr = getrow(r)
     allowed = addr[c] & dir_mask
     return allowed
 
-# Determine the tile location when the actor
+# Determine the tile location given the direction of the actor's movement
 def get_next_tile(r, c, dir):
     if dir & tileup:
         r -= 1
@@ -532,6 +538,9 @@ def move_enemy(i):
 def move_player(i):
     pass
 
+
+##### Game loop
+
 def game_loop():
     count = 0
     while count < 100:
@@ -539,6 +548,8 @@ def game_loop():
         draw_enemies()
         draw_players()
         print_maze()
+        time.sleep(.05)
+        print(chr(12))
 
         for i in range(cur_enemies):
             move_enemy(i)
@@ -549,22 +560,50 @@ def game_loop():
         count += 1
 
 
-def main():
-    global level, cur_enemies, cur_players
+# Debugging stuff below here, things that won't get converted to 6502
 
-    init_maze()
-    print_maze()
+def get_text_maze(m):
+    lines = []
+    for y in range(24):
+        line = ""
+        for x in range(33):
+            tile = m[y][x]
+            if tile < 32:
+                line += tilechars[tile]
+            else:
+                line += chr(tile)
+        lines.append(line)
+    return lines
 
-    level = 1
-    cur_enemies = level_enemies[level]
-    cur_players = 1
-    init_enemies()
-    init_players()
+enemy_history = [[], [], [], [], [], [], []]
+player_history = [[], [], [], []]
 
-    game_loop()
-    draw_enemies()
-    draw_players()
-    print_maze()
+def print_maze(append=""):
+    m = maze.copy()
+
+    # Loop by time history instead of by enemy number so enemy #1 doesn't
+    # always overwrite enemy #0's trail
+    remain = True
+    index = 0
+    while remain:
+        remain = False
+        for i in range(cur_enemies):
+            if index < len(enemy_history[i]):
+                remain = True
+                r, c = enemy_history[i][index]
+                m[r][c] = ord("0") + i
+        for i in range(cur_players):
+            if index < len(player_history[i]):
+                remain = True
+                r, c = player_history[i][index]
+                m[r][c] = ord("$") + i
+        index += 1
+    lines = get_text_maze(m)
+    for i in range(24):
+        print "%02d %s%s" % (i, lines[i], append)
+
+def print_screen():
+    print_maze("_______")
 
 
 
