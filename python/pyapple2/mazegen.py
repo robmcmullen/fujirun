@@ -38,11 +38,72 @@
 
 import time
 import random
+import curses
 
 import numpy as np
 
+import logging
+init_log = logging.getLogger("init")
+logic_log = logging.getLogger("logic")
+draw_log = logging.getLogger("draw")
+maze_log = logging.getLogger("maze")
+game_log = logging.getLogger("game")
 
 ##### Game loader
+
+pad = None
+
+def init():
+    curses.wrapper(init_screen)
+
+def init_screen(*args, **kwargs):
+    global pad, curseschars
+
+    curses.use_default_colors()
+    pad = curses.newpad(24, 40)
+    curses.curs_set(0)
+
+    # have to define these here because initscr hasn't been called when parsing
+    # the python source.
+    curseschars = [
+        curses.ACS_CKBOARD,  # illegal
+        curses.ACS_CKBOARD,
+        curses.ACS_CKBOARD,
+        curses.ACS_VLINE,  # 3: up/down
+        curses.ACS_CKBOARD,
+        curses.ACS_ULCORNER,  # 5: down/right
+        curses.ACS_LLCORNER,  # 6: up/right
+        curses.ACS_LTEE,  # 7: up/down/right
+        curses.ACS_CKBOARD,
+        curses.ACS_URCORNER,  # 9: left/down
+        curses.ACS_LRCORNER,  # 10: left/up
+        curses.ACS_RTEE,  # 11: left/up/down
+        curses.ACS_HLINE,  # 12: left/right
+        curses.ACS_TTEE,  # 13: left/right/down
+        curses.ACS_BTEE,  # 14: left/right/up
+        curses.ACS_CKBOARD,
+
+        # And same again, with dots
+        curses.ACS_CKBOARD,  # illegal
+        curses.ACS_CKBOARD,
+        curses.ACS_CKBOARD,
+        curses.ACS_VLINE,  # 3: up/down
+        curses.ACS_CKBOARD,
+        curses.ACS_ULCORNER,  # 5: down/right
+        curses.ACS_LLCORNER,  # 6: up/right
+        curses.ACS_LTEE,  # 7: up/down/right
+        curses.ACS_CKBOARD,
+        curses.ACS_URCORNER,  # 9: left/down
+        curses.ACS_LRCORNER,  # 10: left/up
+        curses.ACS_RTEE,  # 11: left/up/down
+        curses.ACS_HLINE,  # 12: left/right
+        curses.ACS_TTEE,  # 13: left/right/down
+        curses.ACS_BTEE,  # 14: left/right/up
+        curses.ACS_CKBOARD,
+    ]
+
+    main()
+
 
 def main():
     global level, cur_enemies, cur_players
@@ -50,6 +111,9 @@ def main():
     init_maze()
     print_maze()
     screen[:,0:33] = maze
+    screen[:,33:40] = curses.ACS_CKBOARD
+
+    show_screen()
 
     level = 1
     cur_enemies = level_enemies[level]
@@ -58,8 +122,6 @@ def main():
     init_players()
 
     game_loop()
-    draw_enemies()
-    draw_players()
     print_maze()
 
 ##### Memory usage
@@ -146,6 +208,10 @@ tilechars = [
     "@",  # 32: enemy (temporary)
     "$",  # 33: player
 ]
+
+
+# up/down/left/right would be 0xf, but this is not legal for ghost legs
+curseschars = None
 
 
 ##### Constants
@@ -254,7 +320,7 @@ def sethpath(col):
         if col < vpath_num - 1:
             tile = addr[x2]
             if tile & tileright:
-                print "at y=%d on col %d, found same hpath level at col %d" % (y, col, col + 1)
+                maze_log.debug("at y=%d on col %d, found same hpath level at col %d" % (y, col, col + 1))
                 y -= 1
                 addr = mazerow(y)
 
@@ -388,7 +454,7 @@ def erase_sprites():
         r = last_sprite_y[i]
         addr = screenrow(r)
         c = last_sprite_byte[i]
-        print("restoring background %d @ (%d,%d)" % (i, r, c))
+        draw_log.debug("restoring background %d @ (%d,%d)" % (i, r, c))
         addr[c] = val
 
 def save_backing_store(r, c, sprite):
@@ -396,7 +462,7 @@ def save_backing_store(r, c, sprite):
 
     addr = mazerow(r)
     i = num_sprites_drawn
-    print("saving background %d @ (%d,%d)" % (i, r, c))
+    draw_log.debug("saving background %d @ (%d,%d)" % (i, r, c))
     last_sprite_byte[i] = c
     last_sprite_y[i] = r
     last_sprite_addr[i] = sprite
@@ -458,13 +524,13 @@ def get_next_tile(r, c, dir):
     elif dir & tileright:
         c += 1
     else:
-        print("bad direction % dir")
+        logic_log.error("bad direction % dir")
     return r, c
 
 # Choose a target column for the next up/down direction at a bottom or top T
 def get_next_round_robin(rr_table, x):
     target_col = rr_table[round_robin_index[x]]
-    print "target: %d, indexes=%s, table=%s" % (target_col, str(round_robin_index), rr_table)
+    logic_log.debug("target: %d, indexes=%s, table=%s" % (target_col, str(round_robin_index), rr_table))
     round_robin_index[x] += 1
     if round_robin_index[x] >= vpath_num:
         round_robin_index[x] = 0
@@ -525,9 +591,9 @@ def move_enemy(i):
                     current = get_target_col(i, c, allowed_vert)
 
                     if allowed_vert & tileup:
-                        print("enemy %d: at bot T, new dir %x, col=%d target=%d" % (i, current, c, enemy_target_col[i]))
+                        logic_log.debug("enemy %d: at bot T, new dir %x, col=%d target=%d" % (i, current, c, enemy_target_col[i]))
                     else:
-                        print("enemy %d: at top T, new dir %x, col=%d target=%d" % (i, current, c, enemy_target_col[i]))
+                        logic_log.debug("enemy %d: at top T, new dir %x, col=%d target=%d" % (i, current, c, enemy_target_col[i]))
                 else:
                     # approaching horizontally, so check to see if this is the
                     # vpath to use
@@ -538,21 +604,21 @@ def move_enemy(i):
                         current = allowed_vert
 
                         if allowed_vert & tileup:
-                            print("enemy %d: at bot T, reached target=%d, going up" % (i, c))
+                            logic_log.debug("enemy %d: at bot T, reached target=%d, going up" % (i, c))
                         else:
-                            print("enemy %d: at top T, reached target=%d, going down" % (i, c))
+                            logic_log.debug("enemy %d: at top T, reached target=%d, going down" % (i, c))
                     else:
                         # skip this vertical, keep on moving
 
                         if allowed_vert & tileup:
-                            print("enemy %d: at bot T, col=%d target=%d; skipping" % (i, c, enemy_target_col[i]))
+                            logic_log.debug("enemy %d: at bot T, col=%d target=%d; skipping" % (i, c, enemy_target_col[i]))
                         else:
-                            print("enemy %d: at top T, col=%d target=%d; skipping" % (i, c, enemy_target_col[i]))
+                            logic_log.debug("enemy %d: at top T, col=%d target=%d; skipping" % (i, c, enemy_target_col[i]))
 
             else:
                 # no up or down available, so keep marching on in the same
                 # direction.
-                print("enemy %d: no up/down, keep moving %x" % (i, current))
+                logic_log.debug("enemy %d: no up/down, keep moving %x" % (i, current))
 
         else:
             # only one horizontal dir is available
@@ -563,12 +629,12 @@ def move_enemy(i):
                 if current & tilevert:
                     # moving vertically. Have to take the horizontal path
                     current = allowed_horz
-                    print("enemy %d: taking hpath, start moving %x" % (i, current))
+                    logic_log.debug("enemy %d: taking hpath, start moving %x" % (i, current))
                 else:
                     # moving horizontally into the T, forcing a vertical turn.
                     # Go back to preferred up/down direction
                     current = updown
-                    print("enemy %d: hpath end, start moving %x" % (i, current))
+                    logic_log.debug("enemy %d: hpath end, start moving %x" % (i, current))
             else:
                 # At a corner, because this tile has exactly one vertical and
                 # one horizontal path.
@@ -579,27 +645,27 @@ def move_enemy(i):
                     current = get_target_col(i, c, allowed_vert)
 
                     if allowed_horz & tileleft:
-                        print("enemy %d: at right corner col=%d, heading left to target=%d" % (i, c, enemy_target_col[i]))
+                        logic_log.debug("enemy %d: at right corner col=%d, heading left to target=%d" % (i, c, enemy_target_col[i]))
                     else:
-                        print("enemy %d: at left corner col=%d, heading right to target=%d" % (i, c, enemy_target_col[i]))
+                        logic_log.debug("enemy %d: at left corner col=%d, heading right to target=%d" % (i, c, enemy_target_col[i]))
                 else:
                     # moving horizontally along the top or bottom. If we get
                     # here, the target column must also be this column
                     current = allowed_vert
                     updown = allowed_vert
                     if allowed_vert & tileup:
-                        print("enemy %d: at bot corner col=%d with target %d, heading up" % (i, c, enemy_target_col[i]))
+                        logic_log.debug("enemy %d: at bot corner col=%d with target %d, heading up" % (i, c, enemy_target_col[i]))
                     else:
-                        print("enemy %d: at top corner col=%d with target=%d, heading down" % (i, c, enemy_target_col[i]))
+                        logic_log.debug("enemy %d: at top corner col=%d with target=%d, heading down" % (i, c, enemy_target_col[i]))
 
     elif allowed_vert:
         # left or right is not available, so we must be in the middle of a
         # vpath segment. Only thing to do is keep moving
-        print("enemy %d: keep moving %x" % (i, current))
+        logic_log.debug("enemy %d: keep moving %x" % (i, current))
 
     else:
         # only get here when moving into an illegal space
-        print("enemy %d: illegal move to %d,%d" % (i, r, c))
+        logic_log.debug("enemy %d: illegal move to %d,%d" % (i, r, c))
         current = 0
 
     enemy_updown[i] = updown
@@ -615,13 +681,13 @@ def game_loop():
     count = 0
     num_sprites_drawn = 0
     while count < 200:
-        print("Turn %d" % count)
+        game_log.debug("Turn %d" % count)
         erase_sprites()
         draw_enemies()
         draw_players()
         show_screen()
         time.sleep(.02)
-        print(chr(12))
+        game_log.debug(chr(12))
 
         for i in range(cur_enemies):
             move_enemy(i)
@@ -679,13 +745,22 @@ def print_screen():
 
 
 def show_screen():
+    for r in range(24):
+        for c in range(33):
+            tile = screen[r, c]
+            if tile < 32:
+                val = curseschars[tile]
+            else:
+                val = int(tile)
+            pad.addch(r, c, val)
+    pad.refresh(0, 0, 0, 0, 23, 39)
     lines = get_text_maze(screen)
     for i in range(24):
-        print "%02d %s" % (i, lines[i])
+        game_log.debug("%02d %s" % (i, lines[i]))
 
 
 
 
 if __name__ == "__main__":
     #random.seed(31415)
-    main()
+    init()
