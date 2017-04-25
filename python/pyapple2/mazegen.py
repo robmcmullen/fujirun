@@ -26,6 +26,15 @@
 # 21 X|XXXX|XXXX|XXXX|XXXX|XXXX|XXXX|X_______
 # 22 X\----^----^----^----^----^----/X_______
 # 23 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_______
+#
+# Terminology:
+#
+# vpath - vertical path
+# hpath - horizontal path
+# boxes - area inside path boundaries that gets filled when dots around it are collected
+# enemy - uses Amidar movement
+# player - joystick control
+# actor - either a player or an enemy
 
 import random
 
@@ -41,6 +50,9 @@ tiledown = 0x1
 tileup = 0x2
 tileright = 0x4
 tileleft= 0x8
+tilehorz = tileleft | tileright
+tilevert = tileup | tiledown
+dir_mask = 0x0f
 tiledot = 0x10
 
 # up/down/left/right would be 0xf, but this is not legal for ghost legs
@@ -157,12 +169,12 @@ def setvpath(col):
     addr[x] = vpath_bot_tile[col]
 
 
-# Return a random number between 3 and 6 (inclusive) to represent next row that
+# Return a random number between 3 and 5 (inclusive) to represent next row that
 # contains an hpath. 3 is the minimum number so that if necessary, the last
 # spacing on the bottom can be adjusted upward by 1 to guarantee no cross-
 # throughs
 def get_rand_spacing():
-    return random.randint(3, 6)
+    return random.randint(3, 5)
 
 # Using col and col - 1, find hpaths such that there are no hpaths that meet at
 # the same row in the column col + 1, preventing any "+" intersections (which
@@ -239,6 +251,7 @@ enemy_col = [0, 0, 0, 0, 0, 0, 0]  # current tile column
 enemy_row = [0, 0, 0, 0, 0, 0, 0]  # current tile row
 enemy_updown = [0, 0, 0, 0, 0, 0, 0]  # preferred direction
 enemy_dir = [0, 0, 0, 0, 0, 0, 0]  # actual direction
+enemy_last_horz = [0, 0, 0, 0, 0, 0, 0]  # last horizontal direction
 
 # Hardcoded, up to 4 players
 max_players = 4
@@ -256,14 +269,18 @@ level_start_col = [
     [0, 2, 4, 6],
 ]
 
+# Random number between 0 and 6 (inclusive) used for column starting positions
+def get_rand7():
+    return random.randint(0, 6)
+
 # Get random starting columns for enemies by swapping elements in a list
 # several times
 def get_col_randomizer():
     r = [0, 1, 2, 3, 4, 5, 6]
     x = 10
     while x >= 0:
-        i1 = random.randint(0, 6)
-        i2 = random.randint(0, 6)
+        i1 = get_rand7()
+        i2 = get_rand7()
         old1 = r[i1]
         r[i1] = r[i2]
         r[i2] = old1
@@ -274,7 +291,7 @@ def init_enemies():
     x = 0
     randcol = get_col_randomizer()
     while x < cur_enemies:
-        enemy_col[x] = randcol[x]
+        enemy_col[x] = vpath_cols[randcol[x]]
         enemy_row[x] = mazetoprow
         enemy_updown[x] = tiledown
         enemy_dir[x] = tiledown
@@ -286,7 +303,6 @@ def draw_enemies():
         y = enemy_row[i]
         addr = getrow(y)
         x = enemy_col[i]
-        x = vpath_cols[x]
         addr[x] = 32
         i += 1
 
@@ -298,7 +314,7 @@ def init_players():
     x = 0
     start = get_col_start()
     while x < cur_players:
-        player_col[x] = start[x]
+        player_col[x] = vpath_cols[start[x]]
         player_row[x] = mazebotrow
         player_input_dir[x] = 0
         player_dir[x] = 0
@@ -310,9 +326,121 @@ def draw_players():
         y = player_row[i]
         addr = getrow(y)
         x = player_col[i]
-        x = vpath_cols[x]
         addr[x] = 33
         i += 1
+
+# Determine which of the 4 directions is allowed at the given row, col
+def get_allowed_dirs(r, c):
+    addr = getrow(r)
+    allowed = addr[c] & dir_mask
+    return allowed
+
+# Determine the tile location when the actor
+def get_next_tile(r, c, dir):
+    if dir & tileup:
+        r -= 1
+    elif dir & tiledown:
+        r += 1
+    elif dir & tileleft:
+        c -= 1
+    elif dir & tileright:
+        c += 1
+    else:
+        print("bad direction % dir")
+    return r, c
+
+# Move enemy given the enemy index
+def move_enemy(i):
+    r = enemy_row[i]
+    c = enemy_col[i]
+    current = enemy_dir[i]
+    r, c = get_next_tile(r, c, current)
+    enemy_row[i] = r
+    enemy_col[i] = c
+    allowed = get_allowed_dirs(r, c)
+    updown = enemy_updown[i]
+
+    allowed_horz = allowed & tilehorz
+    allowed_vert = allowed & tilevert
+    if allowed_horz:
+        # left or right is available, we must go that way, because that's the
+        # Amidar(tm) way
+
+        if allowed_horz == tilehorz:
+            # *Both* left and right are available, which means we're either in
+            # the middle of an box horz segment *or* at the top or bottom (but
+            # not at a corner)
+
+            if allowed_vert:
+                # at a T junction at the top or bottom. choose L or R based on
+                # last left or right
+                current = enemy_last_horz[i]
+
+                # and reverse desired up/down direction
+                updown = allowed_vert
+                if allowed_vert & tileup:
+                    print("enemy %d: at bot T, new dir %x" % (i, current))
+                else:
+                    print("enemy %d: at top T, new dir %x" % (i, current))
+            else:
+                # no up or down available, so keep marching on in the same
+                # direction.
+                print("enemy %d: no up/down, keep moving %x" % (i, current))
+
+        else:
+            # only one horizontal dir is available
+
+            if allowed_vert & updown:
+                if current & tilevert:
+                    # Moving vertially but we must take the horizontal
+                    # direction. Only a single direction is possible otherwise
+                    # it would have been caught by the allowed_horz case above.
+                    current = allowed_horz
+                    print("enemy %d: taking hpath, start moving %x" % (i, current))
+                else:
+                    # Moving horizontally but that direction isn't available meaning we are at the end of an hpath. Start moving vertically again.
+                    current = updown
+                    print("enemy %d: hpath end, start moving %x" % (i, current))
+
+            else:
+                # we must be at a corner, so we go the only available horz
+                # direction
+                current = allowed_horz
+
+                # and reverse desired up/down direction
+                updown = allowed_vert
+                if allowed_vert & tileup:
+                    print("enemy %d: at bot corner, new dir %x" % (i, current))
+                else:
+                    print("enemy %d: at top corner, new dir %x" % (i, current))
+
+    else:
+        # left or right is not available, so we must be in the middle of a
+        # vpath segment. Only thing to do is keep moving
+        print("enemy %d: keep moving %x" % (i, current))
+
+    enemy_updown[i] = updown
+    enemy_dir[i] = current
+
+def move_player(i):
+    pass
+
+def game_loop():
+    count = 0
+    while count < 20:
+        print("Turn %d" % count)
+        draw_enemies()
+        draw_players()
+        print_maze()
+
+        for i in range(cur_enemies):
+            move_enemy(i)
+
+        for i in range(cur_players):
+            move_player(i)
+
+        count += 1
+
 
 def main():
     global level, cur_enemies, cur_players
@@ -326,9 +454,12 @@ def main():
     init_enemies()
     init_players()
 
+    game_loop()
     draw_enemies()
     draw_players()
     print_maze()
+
+
 
 
 
