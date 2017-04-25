@@ -49,6 +49,7 @@ def main():
 
     init_maze()
     print_maze()
+    screen[:,0:33] = maze
 
     level = 1
     cur_enemies = level_enemies[level]
@@ -72,6 +73,8 @@ round_robin_index = [0, 0]  # down, up
 # 2 byte addresses
 
 maze = np.empty((24, 33), dtype=np.uint8)
+
+screen = np.empty((24, 40), dtype=np.uint8)
 
 tiledown = 0x1
 tileup = 0x2
@@ -166,8 +169,12 @@ screencols = 40
 ##### Utility functions
 
 # Returns address of tile in col 0 of row y
-def getrow(y):
+def mazerow(y):
     return maze[y]
+
+# Returns address of tile in col 0 of row y of the "screen" memory
+def screenrow(y):
+    return screen[y]
 
 # Return a random number between 3 and 5 (inclusive) to represent next row that
 # contains an hpath. 3 is the minimum number so that if necessary, the last
@@ -203,7 +210,7 @@ def get_col_randomizer():
 def clear_maze():
     y = 0
     while y < screenrows:
-        addr = getrow(y)
+        addr = mazerow(y)
         x = 0
         while x < mazescorecol:
             addr[x] = 0
@@ -211,7 +218,7 @@ def clear_maze():
         y += 1
 
 def setrow(row):
-    addr = getrow(row)
+    addr = mazerow(row)
     x = mazeleftcol
     while x <= mazerightcol:
         addr[x] = tiledot|tileleft|tileright
@@ -220,14 +227,14 @@ def setrow(row):
 def setvpath(col):
     x = vpath_cols[col]
     y = mazetoprow
-    addr = getrow(y)
+    addr = mazerow(y)
     addr[x] = vpath_top_tile[col]
     y += 1
     while y < mazebotrow:
-        addr = getrow(y)
+        addr = mazerow(y)
         addr[x] = tiledot|tileup|tiledown
         y += 1
-    addr = getrow(y)
+    addr = mazerow(y)
     addr[x] = vpath_bot_tile[col]
 
 
@@ -240,7 +247,7 @@ def sethpath(col):
     y = mazetoprow + 1  # first blank row below the top row
     y += get_rand_spacing()
     while y < mazebotrow - 1:
-        addr = getrow(y)
+        addr = mazerow(y)
 
         # If not working on the rightmost column, check to see there are
         # no cross-throughs.
@@ -249,7 +256,7 @@ def sethpath(col):
             if tile & tileright:
                 print "at y=%d on col %d, found same hpath level at col %d" % (y, col, col + 1)
                 y -= 1
-                addr = getrow(y)
+                addr = mazerow(y)
 
         x = x1_save
         addr[x] = tiledot|tileup|tiledown|tileright
@@ -352,11 +359,65 @@ def init_players():
 
 ##### Drawing routines
 
+# Sprites use a backing store array that captures the background before each
+# sprite is drawn. Each sprite's backing store is a a rectange of bytes (always
+# starting on a byte boundary) stored consecutively starting with the first row
+# of bytes, then the second, etc. on down the streen for the height of the
+# sprite. The backing store doesn't actually care what the x value of the
+# actual sprite is, only the byte number in the row of the first pixel
+# affected.
+
+# Max 16 sprites?
+last_sprite_byte = [0] * 16  # byte number in row (0 - 39)
+last_sprite_y = [0] * 16  # y coord of upper left corner of sprite
+last_sprite_addr = [0] * 16  # Addr of sprite? Index of sprite?
+sprite_backing_store = [0] * 16  # Addr of backing store? Index into array?
+sprite_bytes_per_row = [0] * 16  # backing store is a rectangle of bytes
+sprite_num_rows = [0] * 16  # Addr of sprite? Index of sprite?
+num_sprites_drawn = 0
+
+# Erase sprites in reverse order that they're drawn to restore the background
+# properly
+def erase_sprites():
+    global num_sprites_drawn
+
+    while num_sprites_drawn > 0:
+        num_sprites_drawn -= 1
+        i = num_sprites_drawn
+        val = sprite_backing_store[i]
+        r = last_sprite_y[i]
+        addr = screenrow(r)
+        c = last_sprite_byte[i]
+        print("restoring background %d @ (%d,%d)" % (i, r, c))
+        addr[c] = val
+
+def save_backing_store(r, c, sprite):
+    global num_sprites_drawn
+
+    addr = mazerow(r)
+    i = num_sprites_drawn
+    print("saving background %d @ (%d,%d)" % (i, r, c))
+    last_sprite_byte[i] = c
+    last_sprite_y[i] = r
+    last_sprite_addr[i] = sprite
+    sprite_backing_store[i] = addr[c]
+    sprite_bytes_per_row[i] = 1
+    sprite_num_rows[i] = 1
+    num_sprites_drawn += 1
+
+def draw_sprite(r, c, sprite):
+    save_backing_store(r, c, sprite)
+    addr = screenrow(r)
+    addr[c] = sprite
+
 def draw_enemies():
     i = 0
     while i < cur_enemies:
         r = enemy_row[i]
         c = enemy_col[i]
+        sprite = get_enemy_sprite(i)
+        draw_sprite(r, c, sprite)
+
         enemy_history[i].append((r, c))
         i += 1
 
@@ -365,15 +426,24 @@ def draw_players():
     while i < cur_players:
         r = player_row[i]
         c = player_col[i]
+        sprite = get_player_sprite(i)
+        draw_sprite(r, c, sprite)
+
         player_history[i].append((r, c))
         i += 1
+
+def get_enemy_sprite(i):
+    return ord("0") + i
+
+def get_player_sprite(i):
+    return ord("$") + i
 
 
 ##### Game logic
 
 # Determine which of the 4 directions is allowed at the given row, col
 def get_allowed_dirs(r, c):
-    addr = getrow(r)
+    addr = mazerow(r)
     allowed = addr[c] & dir_mask
     return allowed
 
@@ -543,12 +613,14 @@ def move_player(i):
 
 def game_loop():
     count = 0
-    while count < 100:
+    num_sprites_drawn = 0
+    while count < 200:
         print("Turn %d" % count)
+        erase_sprites()
         draw_enemies()
         draw_players()
-        print_maze()
-        time.sleep(.05)
+        show_screen()
+        time.sleep(.02)
         print(chr(12))
 
         for i in range(cur_enemies):
@@ -605,6 +677,11 @@ def print_maze(append=""):
 def print_screen():
     print_maze("_______")
 
+
+def show_screen():
+    lines = get_text_maze(screen)
+    for i in range(24):
+        print "%02d %s" % (i, lines[i])
 
 
 
