@@ -65,6 +65,8 @@ def init_screen(*args, **kwargs):
     global pad, curseschars
 
     curses.use_default_colors()
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_WHITE)
     curses.curs_set(0)
     pad = curses.newpad(30, 40)
     pad.timeout(0)
@@ -404,6 +406,8 @@ player_col = [0, 0, 0, 0]  # current tile col
 player_row = [0, 0, 0, 0]  # current tile row
 player_input_dir = [0, 0, 0, 0]  # current joystick input direction
 player_dir = [0, 0, 0, 0]  # current movement direction
+dot_eaten_row = [255, 255, 255, 255]  # dot eaten by player
+dot_eaten_col = [255, 255, 255, 255]
 
 
 ##### Gameplay initialization
@@ -529,6 +533,16 @@ def get_allowed_dirs(r, c):
     addr = mazerow(r)
     allowed = addr[c] & dir_mask
     return allowed
+
+# See if current tile has a dot
+def has_dot(r, c):
+    addr = mazerow(r)
+    return addr[c] & tiledot
+
+# clear a dot
+def clear_dot(r, c):
+    addr = mazerow(r)
+    addr[c] &= ~tiledot
 
 # Determine the tile location given the direction of the actor's movement
 def get_next_tile(r, c, dir):
@@ -737,6 +751,31 @@ def move_player(i):
                 player_col[i] = c
 
 
+##### Fill routines
+
+def check_dots(i):
+    r = player_row[i]
+    c = player_col[i]
+    if has_dot(r, c):
+        dot_eaten_row[i] = r
+        dot_eaten_col[i] = c
+
+def update_background():
+    for i in range(cur_players):
+        if dot_eaten_col[i] < 128:
+            # dot has been marked as being eaten, so deal with it. Somehow.
+
+            r = dot_eaten_row[i]
+            c = dot_eaten_col[i]
+            addr = mazerow(r)
+            addr[c] &= ~tiledot
+            addr = screenrow(r)
+            addr[c] &= ~tiledot
+
+            # mark as completed
+            dot_eaten_col[i] = 255
+
+
 ##### User input routines
 
 def read_user_input():
@@ -779,6 +818,7 @@ def game_loop():
     while True:
         game_log.debug("Turn %d" % count)
         erase_sprites()
+        update_background()
         draw_enemies()
         draw_players()
         show_screen()
@@ -794,6 +834,7 @@ def game_loop():
 
         for i in range(cur_players):
             move_player(i)
+            check_dots(i)
 
         count += 1
 
@@ -860,11 +901,15 @@ def show_screen():
     for r in range(24):
         for c in range(33):
             tile = screen[r, c]
-            if tile < 32:
+            if tile < 16:
                 val = curseschars[tile]
+                pad.addch(r, c, val, curses.color_pair(1))
+            elif tile < 32:
+                val = curseschars[tile]
+                pad.addch(r, c, val, curses.A_NORMAL)
             else:
                 val = int(tile)
-            pad.addch(r, c, val)
+                pad.addch(r, c, val, curses.A_NORMAL)
     pad.refresh(0, 0, 0, 0, 29, 39)
     lines = get_text_maze(screen)
     for i in range(24):
