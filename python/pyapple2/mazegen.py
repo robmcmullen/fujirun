@@ -49,19 +49,26 @@ draw_log = logging.getLogger("draw")
 maze_log = logging.getLogger("maze")
 game_log = logging.getLogger("game")
 
+CURSES = 1
+
 ##### Game loader
 
 pad = None
 
 def init():
-    curses.wrapper(init_screen)
+    if CURSES:
+        curses.wrapper(init_screen)
+    else:
+        main()
 
 def init_screen(*args, **kwargs):
     global pad, curseschars
 
     curses.use_default_colors()
-    pad = curses.newpad(24, 40)
     curses.curs_set(0)
+    pad = curses.newpad(30, 40)
+    pad.timeout(0)
+    pad.keypad(1)
 
     # have to define these here because initscr hasn't been called when parsing
     # the python source.
@@ -111,7 +118,6 @@ def main():
     init_maze()
     print_maze()
     screen[:,0:33] = maze
-    screen[:,33:40] = curses.ACS_CKBOARD
 
     show_screen()
 
@@ -359,6 +365,9 @@ def init_maze():
 
 
 ##### Gameplay storage
+
+config_num_players = 1
+config_quit = 0
 
 level = -1
 level_enemies = [255, 3, 4, 5, 6, 7]  # starts counting from 1, so dummy zeroth level info
@@ -618,7 +627,7 @@ def move_enemy(i):
             else:
                 # no up or down available, so keep marching on in the same
                 # direction.
-                logic_log.debug("enemy %d: no up/down, keep moving %x" % (i, current))
+                logic_log.debug("enemy %d: no up/down, keep moving %s" % (i, str_dirs(current)))
 
         else:
             # only one horizontal dir is available
@@ -629,12 +638,12 @@ def move_enemy(i):
                 if current & tilevert:
                     # moving vertically. Have to take the horizontal path
                     current = allowed_horz
-                    logic_log.debug("enemy %d: taking hpath, start moving %x" % (i, current))
+                    logic_log.debug("enemy %d: taking hpath, start moving %s" % (i, str_dirs(current)))
                 else:
                     # moving horizontally into the T, forcing a vertical turn.
                     # Go back to preferred up/down direction
                     current = updown
-                    logic_log.debug("enemy %d: hpath end, start moving %x" % (i, current))
+                    logic_log.debug("enemy %d: hpath end, start moving %s" % (i, str_dirs(current)))
             else:
                 # At a corner, because this tile has exactly one vertical and
                 # one horizontal path.
@@ -672,21 +681,78 @@ def move_enemy(i):
     enemy_dir[i] = current
 
 def move_player(i):
-    pass
+    r = player_row[i]
+    c = player_col[i]
+    allowed = get_allowed_dirs(r, c)
+    current = player_dir[i]
+    d = player_input_dir[i]
+    pad.addstr(26, 0, "r=%d c=%d allowed=%s d=%s current=%s      " % (r, c, str_dirs(allowed), str_dirs(d), str_dirs(current)))
+    if d:
+        if allowed & d:
+            # player wants to go in an allowed direction, so go!
+            player_dir[i] = d
+            r, c = get_next_tile(r, c, d)
+            player_row[i] = r
+            player_col[i] = c
+        else:
+            # player wants to go in an illegal direction. instead, continue in
+            # direction that was last requested
+
+            if allowed & current:
+                r, c = get_next_tile(r, c, current)
+                player_row[i] = r
+                player_col[i] = c
+
+
+##### User input routines
+
+def read_user_input():
+    if CURSES:
+        read_curses()
+
+def read_curses():
+    global config_quit
+
+    key = pad.getch()
+    pad.addstr(25, 0, "key = %d   " % key)
+    if key > 0:
+        print "%d   " % key
+    if key == ord('q'):
+        print "QUIT!!!"
+        config_quit = 1
+    elif key == 27:
+        print("QUIT!!!, but need to press ESC one more time for some reason")
+        config_quit = 1
+
+    if key == curses.KEY_UP:
+        player_input_dir[0] = tileup
+    elif key == curses.KEY_DOWN:
+        player_input_dir[0] = tiledown
+    elif key == curses.KEY_LEFT:
+        player_input_dir[0] = tileleft
+    elif key == curses.KEY_RIGHT:
+        player_input_dir[0] = tileright
+    else:
+        player_input_dir[0] = 0
 
 
 ##### Game loop
 
 def game_loop():
+    global config_quit
+
     count = 0
     num_sprites_drawn = 0
-    while count < 200:
+    while True:
         game_log.debug("Turn %d" % count)
         erase_sprites()
         draw_enemies()
         draw_players()
         show_screen()
         time.sleep(.02)
+        read_user_input()
+        if config_quit:
+            return
         game_log.debug(chr(12))
 
         for i in range(cur_enemies):
@@ -699,6 +765,18 @@ def game_loop():
 
 
 # Debugging stuff below here, things that won't get converted to 6502
+
+def str_dirs(d):
+    s = ""
+    if d & tileleft:
+        s += "L"
+    if d & tileright:
+        s += "R"
+    if d & tileup:
+        s += "U"
+    if d & tiledown:
+        s += "D"
+    return s
 
 def get_text_maze(m):
     lines = []
@@ -753,7 +831,7 @@ def show_screen():
             else:
                 val = int(tile)
             pad.addch(r, c, val)
-    pad.refresh(0, 0, 0, 0, 23, 39)
+    pad.refresh(0, 0, 0, 0, 29, 39)
     lines = get_text_maze(screen)
     for i in range(24):
         game_log.debug("%02d %s" % (i, lines[i]))
