@@ -129,6 +129,7 @@ def main():
     cur_players = 1
     init_enemies()
     init_players()
+    init_static_background()
 
     game_loop()
     print_maze()
@@ -248,6 +249,8 @@ screenrows = 24
 mazeleftcol = 1
 mazerightcol = 31
 mazescorecol = 33
+p1scorerow = 2
+p2scorerow = 5
 screencols = 40
 
 # Orbiter goes around the outside border, but not through the maze
@@ -462,7 +465,7 @@ def finish_boxes():
 
 def check_boxes():
     x = 0
-    print level_boxes[0:21]
+    pad.addstr(28, 0, str(level_boxes[0:21]))
     while level_boxes[x] < 0xff:
         c = level_boxes[x]
         if c > 0:
@@ -543,7 +546,12 @@ player_input_dir = [0, 0, 0, 0]  # current joystick input direction
 player_dir = [0, 0, 0, 0]  # current movement direction
 dot_eaten_row = [255, 255, 255, 255]  # dot eaten by player
 dot_eaten_col = [255, 255, 255, 255]
+player_score = [0, 0, 0, 0]
 
+# Scores
+
+dot_score = 10
+paint_score_per_line = 100
 
 ##### Gameplay initialization
 
@@ -886,7 +894,7 @@ def move_player(i):
                 player_col[i] = c
 
 
-##### Fill routines
+##### Scoring routines
 
 def check_dots(i):
     r = player_row[i]
@@ -894,6 +902,7 @@ def check_dots(i):
     if has_dot(r, c):
         dot_eaten_row[i] = r
         dot_eaten_col[i] = c
+        player_score[i] += dot_score
 
 def update_background():
     for i in range(cur_players):
@@ -909,6 +918,17 @@ def update_background():
 
             # mark as completed
             dot_eaten_col[i] = 255
+
+    update_score()
+
+def init_static_background():
+    pad.addstr(p1scorerow, mazescorecol, "Player1")
+    pad.addstr(p2scorerow, mazescorecol, "Player2")
+
+
+def update_score():
+    pad.addstr(p1scorerow+1, mazescorecol, " %05d" % player_score[0])
+    pad.addstr(p2scorerow+1, mazescorecol, " %05d" % player_score[1])
 
 
 ##### User input routines
