@@ -322,7 +322,7 @@ def setvpath(col):
 def sethpath(col):
     x1_save = vpath_cols[col - 1]
     x2 = vpath_cols[col]
-    y = mazetoprow + 1  # first blank row below the top row
+    y = mazetoprow
     y += get_rand_spacing()
     while y < mazebotrow - 1:
         addr = mazerow(y)
