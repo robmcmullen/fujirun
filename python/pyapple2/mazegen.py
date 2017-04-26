@@ -237,6 +237,10 @@ mazerightcol = 31
 mazescorecol = 33
 screencols = 40
 
+# Orbiter goes around the outside border, but not through the maze
+orbiterstartcol = mazerightcol
+orbiterstartrow = (mazetoprow + mazebotrow) / 2
+
 
 ##### Utility functions
 
@@ -370,7 +374,7 @@ config_num_players = 1
 config_quit = 0
 
 level = -1
-level_enemies = [255, 3, 4, 5, 6, 7]  # starts counting from 1, so dummy zeroth level info
+level_enemies = [255, 4, 5, 6, 7, 8]  # level starts counting from 1, so dummy zeroth level info
 level_speeds = [255, 0, 0, 0, 0, 0]  # probably needs to be 16 bit
 level_start_col = [
     [255, 255, 255, 255],
@@ -381,6 +385,7 @@ level_start_col = [
 ]
 
 # Hardcoded, up to 8 enemies because there are max of 7 vpaths + 1 orbiter
+# Enemy #0 is the orbiter
 max_enemies = 8
 cur_enemies = -1
 enemy_col = [0, 0, 0, 0, 0, 0, 0, 0]  # current tile column
@@ -404,7 +409,10 @@ player_dir = [0, 0, 0, 0]  # current movement direction
 ##### Gameplay initialization
 
 def init_enemies():
-    x = 0
+    enemy_col[0] = orbiterstartcol
+    enemy_row[0] = orbiterstartrow
+    enemy_dir[0] = tileup
+    x = 1
     randcol = get_col_randomizer()
     while x < cur_enemies:
         enemy_col[x] = randcol[x]
@@ -565,6 +573,31 @@ def get_target_col(i, c, allowed_vert):
         current = tileright
     enemy_target_col[i] = target_col
     return current
+
+# Move orbiter
+def move_orbiter():
+    r = enemy_row[0]
+    c = enemy_col[0]
+    current = enemy_dir[0]
+    r, c = get_next_tile(r, c, current)
+    enemy_row[0] = r
+    enemy_col[0] = c
+    allowed = get_allowed_dirs(r, c)
+
+    if allowed & current:
+        # Can continue the current direction, so keep on doing it
+
+        logic_log.debug("orbiter: continuing %s" % str_dirs(current))
+    else:
+        # Can't continue, and because we must be at a corner, turn 90 degrees.
+        # So, if we are moving vertically, go horizontally, and vice versa.
+
+        if current & tilevert:
+            current = allowed & tilehorz
+        else:
+            current = allowed & tilevert
+        enemy_dir[0] = current
+
 
 # Move enemy given the enemy index
 def move_enemy(i):
@@ -755,7 +788,8 @@ def game_loop():
             return
         game_log.debug(chr(12))
 
-        for i in range(cur_enemies):
+        move_orbiter()  # always enemy #0
+        for i in range(1, cur_enemies):
             move_enemy(i)
 
         for i in range(cur_players):
