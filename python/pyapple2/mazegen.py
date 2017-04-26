@@ -952,13 +952,6 @@ def game_loop():
     num_sprites_drawn = 0
     while True:
         game_log.debug("Turn %d" % count)
-        erase_sprites()
-        check_boxes()
-        update_background()
-        draw_enemies()
-        draw_players()
-        show_screen()
-        time.sleep(.02)
         read_user_input()
         if config_quit:
             return
@@ -971,6 +964,15 @@ def game_loop():
         for i in range(cur_players):
             move_player(i)
             check_dots(i)
+
+        check_boxes()
+
+        erase_sprites()
+        update_background()
+        draw_enemies()
+        draw_players()
+        show_screen()
+        time.sleep(.02)
 
         count += 1
 
