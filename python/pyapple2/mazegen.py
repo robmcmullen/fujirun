@@ -47,6 +47,7 @@ init_log = logging.getLogger("init")
 logic_log = logging.getLogger("logic")
 draw_log = logging.getLogger("draw")
 maze_log = logging.getLogger("maze")
+box_log = logging.getLogger("maze")
 game_log = logging.getLogger("game")
 
 CURSES = 1
@@ -156,7 +157,17 @@ dir_mask = 0x0f
 tiledot = 0x10
 
 vpath_num = 7
-vpath_cols = [1, 6, 11, 16, 21, 26, 31]
+box_width = 4
+vpath_col_spacing = box_width + 1
+vpath_cols = [
+    1 + 0 * vpath_col_spacing,
+    1 + 1 * vpath_col_spacing,
+    1 + 2 * vpath_col_spacing,
+    1 + 3 * vpath_col_spacing,
+    1 + 4 * vpath_col_spacing,
+    1 + 5 * vpath_col_spacing,
+    1 + 6 * vpath_col_spacing,
+    ]
 vpath_top_tile = [
     tiledot|tiledown|tileright,
     tiledot|tiledown|tileleft|tileright,
@@ -294,7 +305,9 @@ def clear_maze():
             addr[x] = 0
             x += 1
         y += 1
+    init_boxes()
 
+# Set all elements in a row to dot + left + right; only top and bottom
 def setrow(row):
     addr = mazerow(row)
     x = mazeleftcol
@@ -302,6 +315,8 @@ def setrow(row):
         addr[x] = tiledot|tileleft|tileright
         x += 1
 
+# Create all 7 vpaths, using top/bot character from a list to handle both
+# corners and T connections.
 def setvpath(col):
     x = vpath_cols[col]
     y = mazetoprow
@@ -316,13 +331,20 @@ def setvpath(col):
     addr[x] = vpath_bot_tile[col]
 
 
-# Using col and col - 1, find hpaths such that there are no hpaths that meet at
-# the same row in the column col + 1, preventing any "+" intersections (which
-# is not legal ghost legs)
+# Create hpaths such that there are no hpaths that meet at the same row in
+# adjacent columns (cross-throughs are not allowed in ghost legs). Starts at
+# the rightmost vpath and moves left using the rightmost vpath as the input to
+# this function and building hpaths between it and the vpath to the left. The
+# first time this routine is called there won't be any existing columns to
+# compare to, otherwise if a tile on the left vpath has a rightward pointing
+# hpath, move up one and draw the hpath there. This works because the minimum
+# hpath vertical positioning leaves 2 empty rows, so moving up by one still
+# leaves 1 empty row.
 def sethpath(col):
     x1_save = vpath_cols[col - 1]
     x2 = vpath_cols[col]
     y = mazetoprow
+    start_box(y, x1_save)
     y += get_rand_spacing()
     while y < mazebotrow - 1:
         addr = mazerow(y)
@@ -335,6 +357,7 @@ def sethpath(col):
                 maze_log.debug("at y=%d on col %d, found same hpath level at col %d" % (y, col, col + 1))
                 y -= 1
                 addr = mazerow(y)
+        add_box(y)
 
         x = x1_save
         addr[x] = tiledot|tileup|tiledown|tileright
@@ -344,6 +367,8 @@ def sethpath(col):
             x += 1
         addr[x2] = tiledot|tileup|tiledown|tileleft
         y += get_rand_spacing()
+    add_box(mazebotrow)
+
 
 def init_maze():
     clear_maze()
@@ -368,6 +393,116 @@ def init_maze():
     while counter > 0:  # note >, not >=
         sethpath(counter)
         counter -= 1
+
+    finish_boxes()
+
+
+##### Box handling/painting
+
+# Level box storage uses the left column (we don't need to store the right side
+# because they are always a fixed distance away) and a list of rows.
+#
+# To examine the boundary of each box to check for dots, the top row and the
+# bottom row must look at box_width + 2 tiles, all the middle rows only have to
+# check the left and right tiles
+#
+# The entire list of rows doesn't need to be stored, either; only the top and
+# bottom because everything else is a middle row. Therefore, all we need is the
+# x of the left vpath, the top row and the bottom row:
+#
+# x1, ytop, ybot
+#
+# is 3 bytes. Max number of boxes is 10 per column, 6 columns that's 10 * 6 * 3
+# = 180 bytes. Less than 256, yay!
+#
+# n can also be used as a flag: if n == 0, the box has already been checked and
+# painted. n == 0xff is the flag to end processing.
+
+# 01 X/----T----T----T----T----T----\X_______
+# 02 X|XXXX|XXXX|XXXX|XXXX|XXXX|XXXX|X_______
+# 03 X|XXXX|XXXX|XXXX|XXXX|XXXX|XXXX|X_______
+# 04 X|XXXX|XXXX|XXXX|XXXX+----+XXXX|X_______
+
+next_level_box = 0  # in the assembly, this will be it the x or y register or zero page
+level_boxes = [0] * 10 * 6 * 8
+box_col_save = 0
+box_row_save = 0
+
+# Box painting will be in hires so this array will become a tracker for the
+# hires display. It will need y address, y end address, x byte number. It's
+# possible for up to 3 boxes to get triggered to start painting when collecting
+# a dot, and because it will take multiple frames to paint a box there may be
+# even more active at one time, so for safety use 16 as possible max.
+#
+# xbyte, ytop, ybot
+box_painting = [0] * 3 * 16
+
+def init_boxes():
+    next_level_box = 0
+
+def start_box(r, c):
+    global box_col_save, box_row_save
+
+    box_col_save = c
+    box_row_save = r
+
+def add_box(r):
+    global next_level_box, box_row_save
+
+    i = next_level_box
+    level_boxes[i] = box_col_save
+    level_boxes[i + 1] = box_row_save
+    level_boxes[i + 2] = r
+    box_row_save = r
+    next_level_box += 3
+
+def finish_boxes():
+    i = next_level_box
+    level_boxes[i] = 0xff
+
+def check_boxes():
+    x = 0
+    print level_boxes[0:21]
+    while level_boxes[x] < 0xff:
+        c = level_boxes[x]
+        if c > 0:
+            r1 = level_boxes[x + 1]
+            addr = mazerow(r1)
+            r1 += 1
+            r1_save = r1
+
+            # If there's a dot anywhere, then the box isn't painted. We don't
+            # care where it is so we don't need to keep track of individual
+            # locations.
+            dot = addr[c] | addr[c + 1] | addr[c + 2] | addr[c + 3] | addr[c + 4] | addr[c + 5]
+
+            r2 = level_boxes[x + 2]
+            addr = mazerow(r2)
+            dot |= addr[c] | addr[c + 1] | addr[c + 2] | addr[c + 3] | addr[c + 4] | addr[c + 5]
+
+            while r1 < r2:
+                addr = mazerow(r1)
+                dot |= addr[c] | addr[c + 5]
+                r1 += 1
+
+            if (dot & tiledot) == 0:
+                # No dots anywhere! Start painting
+                mark_box_for_painting(r1_save, r2, c + 1)
+                level_boxes[x] = 0  # Set flag so we don't check this box again
+
+        x += 3
+
+def mark_box_for_painting(r1, r2, c):
+    box_log.debug("Marking box at %d,%d -> %d,%d" % (r1, c, r2, c + box_width))
+    x = 0
+    while x < 3 * 16:
+        if box_painting[x] == 0:
+            box_painting[x] = c
+            box_painting[x + 1] = r1
+            box_painting[x + 1] = r2
+            break
+        x += 3
+    pad.addstr(27, 0, "starting box %d,%d -> %d,%d" % (r1, c, r2, c + box_width))
 
 
 ##### Gameplay storage
@@ -818,6 +953,7 @@ def game_loop():
     while True:
         game_log.debug("Turn %d" % count)
         erase_sprites()
+        check_boxes()
         update_background()
         draw_enemies()
         draw_players()
