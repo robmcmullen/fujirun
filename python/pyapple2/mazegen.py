@@ -463,7 +463,7 @@ def finish_boxes():
     i = next_level_box
     level_boxes[i] = 0xff
 
-def check_boxes():
+def check_boxes(i):
     x = 0
     pad.addstr(28, 0, str(level_boxes[0:21]))
     while level_boxes[x] < 0xff:
@@ -491,6 +491,8 @@ def check_boxes():
             if (dot & tiledot) == 0:
                 # No dots anywhere! Start painting
                 mark_box_for_painting(r1_save, r2, c + 1)
+                num_rows = r2 - r1_save
+                player_score[i] += num_rows * 100
                 level_boxes[x] = 0  # Set flag so we don't check this box again
 
         x += 3
@@ -1006,8 +1008,7 @@ def game_loop():
         for i in range(cur_players):
             move_player(i)
             check_dots(i)
-
-        check_boxes()
+            check_boxes(i)
 
         erase_sprites()
         update_background()
