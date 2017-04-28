@@ -43,11 +43,13 @@ import curses
 import numpy as np
 
 import logging
+logging.basicConfig(level=logging.WARNING)
 init_log = logging.getLogger("init")
 logic_log = logging.getLogger("logic")
 draw_log = logging.getLogger("draw")
 maze_log = logging.getLogger("maze")
 box_log = logging.getLogger("maze")
+box_log.setLevel(logging.DEBUG)
 game_log = logging.getLogger("game")
 
 CURSES = 1
@@ -69,7 +71,7 @@ def init_screen(*args, **kwargs):
     curses.start_color()
     curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_WHITE)
     curses.curs_set(0)
-    pad = curses.newpad(30, 80)
+    pad = curses.newpad(40, 80)
     pad.timeout(0)
     pad.keypad(1)
 
@@ -126,7 +128,7 @@ def main():
 
     level = 1
     cur_enemies = level_enemies[level]
-    cur_players = 1
+    cur_players = 2
     init_enemies()
     init_players()
     init_static_background()
@@ -437,8 +439,9 @@ box_row_save = 0
 # a dot, and because it will take multiple frames to paint a box there may be
 # even more active at one time, so for safety use 16 as possible max.
 #
-# xbyte, ytop, ybot
-box_painting = [0] * 3 * 16
+# player #, xbyte, ytop, ybot
+num_box_painting_params = 4
+box_painting = [0] * num_box_painting_params * 16
 
 def init_boxes():
     next_level_box = 0
@@ -490,24 +493,25 @@ def check_boxes(i):
 
             if (dot & tiledot) == 0:
                 # No dots anywhere! Start painting
-                mark_box_for_painting(r1_save, r2, c + 1)
+                mark_box_for_painting(i, r1_save, r2, c + 1)
                 num_rows = r2 - r1_save
                 player_score[i] += num_rows * 100
                 level_boxes[x] = 0  # Set flag so we don't check this box again
 
         x += 3
 
-def mark_box_for_painting(r1, r2, c):
-    box_log.debug("Marking box at %d,%d -> %d,%d" % (r1, c, r2, c + box_width))
+def mark_box_for_painting(i, r1, r2, c):
+    box_log.debug("Marking box, player $%d @ %d,%d -> %d,%d" % (i, r1, c, r2, c + box_width))
     x = 0
-    while x < 3 * 16:
+    while x < num_box_painting_params * 16:
         if box_painting[x] == 0:
             box_painting[x] = c
             box_painting[x + 1] = r1
             box_painting[x + 2] = r2
+            box_painting[x + 3] = i
             break
-        x += 3
-    pad.addstr(27, 0, "starting box %d,%d -> %d,%d" % (r1, c, r2, c + box_width))
+        x += num_box_painting_params
+    pad.addstr(27, 0, "starting box, player @ %d %d,%d -> %d,%d" % (i, r1, c, r2, c + box_width))
 
 
 ##### Gameplay storage
@@ -904,17 +908,22 @@ def check_dots(i):
     if has_dot(r, c):
         dot_eaten_row[i] = r
         dot_eaten_col[i] = c
+
+        # Update maze here so we can check which player closed off a box
+        addr = mazerow(r)
+        addr[c] &= ~tiledot
+
         player_score[i] += dot_score
 
 def update_background():
     for i in range(cur_players):
         if dot_eaten_col[i] < 128:
-            # dot has been marked as being eaten, so deal with it. Somehow.
+            # Here we update the screen; note the maze has already been updated
+            # but we don't change the background until now so sprites can
+            # restore their saved backgrounds first.
 
             r = dot_eaten_row[i]
             c = dot_eaten_col[i]
-            addr = mazerow(r)
-            addr[c] &= ~tiledot
             addr = screenrow(r)
             addr[c] &= ~tiledot
 
@@ -927,23 +936,27 @@ def update_background():
 def paint_boxes():
     x = 0
     pad.addstr(28, 0, "Checking box:")
-    while x < 3 * 16:
-        pad.addstr(28, 20 + x, "%d   " % x)
+    while x < num_box_painting_params * 16:
+        pad.addstr(29, x, "%d   " % x)
         if box_painting[x] > 0:
             c1 = box_painting[x]
             r1 = box_painting[x + 1]
             r2 = box_painting[x + 2]
-            box_log.debug("Painting box line at %d,%d" % (r1, c1))
-            pad.addstr(29, 0, "painting box line at %d,%d" % (r1, c1))
+            i = box_painting[x + 3]
+            box_log.debug("Painting box line, player %d at %d,%d" % (i, r1, c1))
+            pad.addstr(30, 0, "painting box line at %d,%d" % (r1, c1))
             addr = screenrow(r1)
-            for i in range(box_width):
-                addr[c1 + i] = ord("X")
+            for c in range(box_width):
+                if i == 0:
+                    addr[c1 + c] = ord("X")
+                else:
+                    addr[c1 + c] = ord(".")
             r1 += 1
             print "ROW", r1
             box_painting[x + 1] = r1
             if r1 >= r2:
                 box_painting[x] = 0
-        x += 3
+        x += num_box_painting_params
 
 def init_static_background():
     pad.addstr(p1scorerow, mazescorecol, "Player1")
@@ -985,6 +998,17 @@ def read_curses():
         player_input_dir[0] = tileright
     else:
         player_input_dir[0] = 0
+
+    if key == ord(',') or key == ord('.'):
+        player_input_dir[1] = tileup
+    elif key == ord('o'):
+        player_input_dir[1] = tiledown
+    elif key == ord('a'):
+        player_input_dir[1] = tileleft
+    elif key == ord('e'):
+        player_input_dir[1] = tileright
+    else:
+        player_input_dir[1] = 0
 
 
 ##### Game loop
