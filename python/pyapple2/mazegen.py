@@ -271,8 +271,6 @@ SCREEN_ROWS = 24
 MAZE_LEFT_COL = 1
 MAZE_RIGHT_COL = 31
 MAZE_SCORE_COL = 33
-P1_SCORE_ROW = 2
-P2_SCORE_ROW = 5
 SCREEN_COLS = 40
 
 # Orbiter goes around the outside border, but not through the maze
@@ -543,6 +541,7 @@ player_start_col = [
     [vpath_cols[1], vpath_cols[3], vpath_cols[5], 0],
     [vpath_cols[0], vpath_cols[2], vpath_cols[4], vpath_cols[6]],
 ]
+player_score_row = [2, 7, 12, 17]
 
 # Hardcoded, up to 8 enemies because there are max of 7 vpaths + 1 orbiter
 # Enemy #0 is the orbiter
@@ -558,6 +557,9 @@ round_robin_down = [0, 0, 0, 0, 0, 0, 0]
 
 # Hardcoded, up to 4 players
 MAX_PLAYERS = 4
+STARTING_LIVES = 3
+BONUS_LIFE = 10000
+MAX_LIVES = 8
 player_col = [0, 0, 0, 0]  # current tile col
 player_row = [0, 0, 0, 0]  # current tile row
 player_input_dir = [0, 0, 0, 0]  # current joystick input direction
@@ -565,6 +567,7 @@ player_dir = [0, 0, 0, 0]  # current movement direction
 dot_eaten_row = [255, 255, 255, 255]  # dot eaten by player
 dot_eaten_col = [255, 255, 255, 255]
 player_score = [0, 0, 0, 0]
+player_next_target_score = [0, 0, 0, 0]
 player_lives = [0, 0, 0, 0]  # lives remaining
 player_status = [0, 0, 0, 0]  # alive, exploding, dead, regenerating, ???
 player_frame_counter = [0, 0, 0, 0]  # frame counter for sprite changes
@@ -573,6 +576,7 @@ PLAYER_DEAD = 0
 PLAYER_ALIVE = 1
 PLAYER_EXPLODING = 2
 PLAYER_REGENERATING = 3
+GAME_OVER = 4
 
 # Scores
 
@@ -604,7 +608,6 @@ def init_player():
     player_row[zp.current_player] = MAZE_BOT_ROW
     player_input_dir[zp.current_player] = 0
     player_dir[zp.current_player] = 0
-    player_lives[zp.current_player] = 3
     player_status[zp.current_player] = PLAYER_ALIVE
     player_frame_counter[zp.current_player] = 0
 
@@ -612,6 +615,8 @@ def init_players():
     zp.current_player = 0
     while zp.current_player < zp.num_players:
         init_player()
+        player_lives[zp.current_player] = STARTING_LIVES
+        player_next_target_score[zp.current_player] = BONUS_LIFE
         zp.current_player += 1
 
 
@@ -711,9 +716,13 @@ def get_player_sprite():
         c = None
         player_frame_counter[zp.current_player] -= 1
         if player_frame_counter[zp.current_player] <= 0:
-            init_player()
-            player_status[zp.current_player] = PLAYER_REGENERATING
-            player_frame_counter[zp.current_player] = REGENERATING_TIME
+            player_lives[zp.current_player] -= 1
+            if player_lives[zp.current_player] > 0:
+                init_player()
+                player_status[zp.current_player] = PLAYER_REGENERATING
+                player_frame_counter[zp.current_player] = REGENERATING_TIME
+            else:
+                player_status[zp.current_player] = GAME_OVER
     elif a == PLAYER_REGENERATING:
         collision_log.debug("p%d: regenerating, frame=%d" % (zp.current_player, player_frame_counter[zp.current_player]))
         if player_frame_counter[zp.current_player] & 1:
@@ -1001,9 +1010,9 @@ def update_background():
 
             # mark as completed
             dot_eaten_col[zp.current_player] = 255
+        update_score()
         zp.current_player += 1
 
-    update_score()
     paint_boxes()
 
 def paint_boxes():
@@ -1032,13 +1041,33 @@ def paint_boxes():
         x += NUM_BOX_PAINTING_PARAMS
 
 def init_static_background():
-    pad.addstr(P1_SCORE_ROW, MAZE_SCORE_COL, "Player1")
-    pad.addstr(P2_SCORE_ROW, MAZE_SCORE_COL, "Player2")
+    zp.current_player = 0
+    while zp.current_player < zp.num_players:
+        row = player_score_row[zp.current_player]
+        pad.addstr(row - 1, MAZE_SCORE_COL, "       ")
+        pad.addstr(row, MAZE_SCORE_COL,     "Player%d" % (zp.current_player + 1))
+        zp.current_player += 1
 
+def show_lives(row, num):
+    i = 1
+    col = SCREEN_COLS
+    while col > MAZE_SCORE_COL:
+        col -= 1
+        if i < num:
+            c = "*"
+        else:
+            c = " "
+        pad.addch(row, col, ord(c))
+        i += 1
 
 def update_score():
-    pad.addstr(P1_SCORE_ROW+1, MAZE_SCORE_COL, " %05d" % player_score[0])
-    pad.addstr(P2_SCORE_ROW+1, MAZE_SCORE_COL, " %05d" % player_score[1])
+    row = player_score_row[zp.current_player]
+    if player_status[zp.current_player] == GAME_OVER:
+        pad.addstr(row - 1, MAZE_SCORE_COL, "GAME   ")
+        pad.addstr(row, MAZE_SCORE_COL,     "   OVER")
+    else:
+        pad.addstr(row + 1, MAZE_SCORE_COL, " %06d" % player_score[zp.current_player])
+        show_lives(row + 2, player_lives[zp.current_player])
 
 
 ##### User input routines
