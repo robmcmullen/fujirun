@@ -69,7 +69,7 @@ def init_screen(*args, **kwargs):
     curses.start_color()
     curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_WHITE)
     curses.curs_set(0)
-    pad = curses.newpad(30, 40)
+    pad = curses.newpad(30, 80)
     pad.timeout(0)
     pad.keypad(1)
 
@@ -502,7 +502,7 @@ def mark_box_for_painting(r1, r2, c):
         if box_painting[x] == 0:
             box_painting[x] = c
             box_painting[x + 1] = r1
-            box_painting[x + 1] = r2
+            box_painting[x + 2] = r2
             break
         x += 3
     pad.addstr(27, 0, "starting box %d,%d -> %d,%d" % (r1, c, r2, c + box_width))
@@ -920,6 +920,28 @@ def update_background():
             dot_eaten_col[i] = 255
 
     update_score()
+    paint_boxes()
+
+def paint_boxes():
+    x = 0
+    pad.addstr(28, 0, "Checking box:")
+    while x < 3 * 16:
+        pad.addstr(28, 20 + x, "%d   " % x)
+        if box_painting[x] > 0:
+            c1 = box_painting[x]
+            r1 = box_painting[x + 1]
+            r2 = box_painting[x + 2]
+            box_log.debug("Painting box line at %d,%d" % (r1, c1))
+            pad.addstr(29, 0, "painting box line at %d,%d" % (r1, c1))
+            addr = screenrow(r1)
+            for i in range(box_width):
+                addr[c1 + i] = ord("X")
+            r1 += 1
+            print "ROW", r1
+            box_painting[x + 1] = r1
+            if r1 >= r2:
+                box_painting[x] = 0
+        x += 3
 
 def init_static_background():
     pad.addstr(p1scorerow, mazescorecol, "Player1")
