@@ -49,8 +49,9 @@ logic_log = logging.getLogger("logic")
 draw_log = logging.getLogger("draw")
 maze_log = logging.getLogger("maze")
 box_log = logging.getLogger("maze")
-box_log.setLevel(logging.DEBUG)
 game_log = logging.getLogger("game")
+collision_log = logging.getLogger("collision")
+collision_log.setLevel(logging.DEBUG)
 
 CURSES = 1
 
@@ -143,11 +144,18 @@ class ZeroPage(object):
     c = 0
     round_robin_index = [0, 0]  # down, up
     level = 0
+
+    # enemy info
     num_enemies = 0
     current_enemy = 0  # index of enemy being processed
+
+    # player info
     num_players = 1
     current_player = 0  # index of player currently being processed
+
+    # sprite
     num_sprites_drawn = 0
+
 
     # box drawing workspace
     next_level_box = 0 
@@ -527,12 +535,12 @@ config_quit = 0
 level = -1
 level_enemies = [255, 4, 5, 6, 7, 8]  # level starts counting from 1, so dummy zeroth level info
 level_speeds = [255, 0, 0, 0, 0, 0]  # probably needs to be 16 bit
-level_start_col = [
+player_start_col = [
     [255, 255, 255, 255],
-    [3, 0, 0, 0],
-    [2, 4, 0, 0],
-    [1, 3, 5, 0],
-    [0, 2, 4, 6],
+    [vpath_cols[3], 0, 0, 0],
+    [vpath_cols[2], vpath_cols[4], 0, 0],
+    [vpath_cols[1], vpath_cols[3], vpath_cols[5], 0],
+    [vpath_cols[0], vpath_cols[2], vpath_cols[4], vpath_cols[6]],
 ]
 
 # Hardcoded, up to 8 enemies because there are max of 7 vpaths + 1 orbiter
@@ -556,6 +564,14 @@ player_dir = [0, 0, 0, 0]  # current movement direction
 dot_eaten_row = [255, 255, 255, 255]  # dot eaten by player
 dot_eaten_col = [255, 255, 255, 255]
 player_score = [0, 0, 0, 0]
+player_lives = [0, 0, 0, 0]  # lives remaining
+player_status = [0, 0, 0, 0]  # alive, exploding, dead, regenerating, ???
+player_frame_counter = [0, 0, 0, 0]  # frame counter for sprite changes
+
+PLAYER_DEAD = 0
+PLAYER_ALIVE = 1
+PLAYER_EXPLODING = 2
+PLAYER_REGENERATING = 3
 
 # Scores
 
@@ -581,19 +597,21 @@ def init_enemies():
     round_robin_down[:] = get_col_randomizer()
     zp.round_robin_index[:] = [0, 0]
 
-def get_col_start():
-    addr = level_start_col[zp.num_players]
-    return addr
+def init_player():
+    addr = player_start_col[zp.num_players]
+    player_col[zp.current_player] = addr[zp.current_player]
+    player_row[zp.current_player] = mazebotrow
+    player_input_dir[zp.current_player] = 0
+    player_dir[zp.current_player] = 0
+    player_lives[zp.current_player] = 3
+    player_status[zp.current_player] = PLAYER_ALIVE
+    player_frame_counter[zp.current_player] = 0
 
 def init_players():
-    x = 0
-    start = get_col_start()
-    while x < zp.num_players:
-        player_col[x] = vpath_cols[start[x]]
-        player_row[x] = mazebotrow
-        player_input_dir[x] = 0
-        player_dir[x] = 0
-        x += 1
+    zp.current_player = 0
+    while zp.current_player < zp.num_players:
+        init_player()
+        zp.current_player += 1
 
 
 ##### Drawing routines
@@ -613,6 +631,12 @@ last_sprite_addr = [0] * 16  # Addr of sprite? Index of sprite?
 sprite_backing_store = [0] * 16  # Addr of backing store? Index into array?
 sprite_bytes_per_row = [0] * 16  # backing store is a rectangle of bytes
 sprite_num_rows = [0] * 16  # Addr of sprite? Index of sprite?
+
+exploding_char = ['*', '*', '@', '#', '\\', '-', '/', '|', '\\', '-', '/', '|', '\\', '-', '/', '|', '\\', '-', '/', '|']
+EXPLODING_TIME = len(exploding_char) - 1
+DEAD_TIME = 40
+REGENERATING_TIME = 60
+
 
 # Erase sprites in reverse order that they're drawn to restore the background
 # properly
@@ -640,9 +664,10 @@ def save_backing_store(r, c, sprite):
     zp.num_sprites_drawn += 1
 
 def draw_sprite(r, c, sprite):
-    save_backing_store(r, c, sprite)
-    addr = screenrow(r)
-    addr[c] = sprite
+    if sprite is not None:
+        save_backing_store(r, c, sprite)
+        addr = screenrow(r)
+        addr[c] = sprite
 
 def draw_enemies():
     zp.current_enemy = 0
@@ -670,7 +695,34 @@ def get_enemy_sprite():
     return ord("0") + zp.current_enemy
 
 def get_player_sprite():
-    return ord("$") + zp.current_player
+    a = player_status[zp.current_player]
+    if a == PLAYER_ALIVE:
+        c = ord("$") + zp.current_player
+    elif a == PLAYER_EXPLODING:
+        collision_log.debug("p%d: exploding, frame=%d" % (zp.current_player, player_frame_counter[zp.current_player]))
+        c = ord(exploding_char[player_frame_counter[zp.current_player]])
+        player_frame_counter[zp.current_player] -= 1
+        if player_frame_counter[zp.current_player] <= 0:
+            player_status[zp.current_player] = PLAYER_DEAD
+            player_frame_counter[zp.current_player] = DEAD_TIME
+    elif a == PLAYER_DEAD:
+        collision_log.debug("p%d: dead, waiting=%d" % (zp.current_player, player_frame_counter[zp.current_player]))
+        c = None
+        player_frame_counter[zp.current_player] -= 1
+        if player_frame_counter[zp.current_player] <= 0:
+            init_player()
+            player_status[zp.current_player] = PLAYER_REGENERATING
+            player_frame_counter[zp.current_player] = REGENERATING_TIME
+    elif a == PLAYER_REGENERATING:
+        collision_log.debug("p%d: regenerating, frame=%d" % (zp.current_player, player_frame_counter[zp.current_player]))
+        if player_frame_counter[zp.current_player] & 1:
+            c = ord("$") + zp.current_player
+        else:
+            c = ord(" ")
+        player_frame_counter[zp.current_player] -= 1
+        if player_frame_counter[zp.current_player] <= 0:
+            player_status[zp.current_player] = PLAYER_ALIVE
+    return c
 
 
 ##### Game logic
@@ -898,6 +950,26 @@ def move_player():
                 player_col[zp.current_player] = c
 
 
+##### Collision detection
+
+# Check possible collisions between the current player and any enemies
+def check_collisions():
+    zp.current_enemy = 0
+    r = player_row[zp.current_player]
+    c = player_col[zp.current_player]
+    while zp.current_enemy < zp.num_enemies:
+        # Will provide pac-man style bug where they could pass through each
+        # other because it's only checking tiles
+        if enemy_row[zp.current_enemy] == r and enemy_col[zp.current_enemy] == c:
+            start_exploding()
+            break
+        zp.current_enemy += 1
+
+def start_exploding():
+    player_status[zp.current_player] = PLAYER_EXPLODING
+    player_frame_counter[zp.current_player] = EXPLODING_TIME
+
+
 ##### Scoring routines
 
 def check_dots():
@@ -1034,9 +1106,18 @@ def game_loop():
 
         zp.current_player = 0
         while zp.current_player < zp.num_players:
-            move_player()
-            check_dots()
-            check_boxes()
+            if player_status[zp.current_player] == PLAYER_REGENERATING:
+                # If regenerating, change to alive if the player starts to move
+                if player_input_dir[zp.current_player] > 0:
+                    player_status[zp.current_player] = PLAYER_ALIVE
+            if player_status[zp.current_player] == PLAYER_ALIVE:
+                # only move and check collisions if alive
+                move_player()
+                check_collisions()
+            if player_status[zp.current_player] == PLAYER_ALIVE:
+                # only check for points if still alive
+                check_dots()
+                check_boxes()
             zp.current_player += 1
 
         erase_sprites()
