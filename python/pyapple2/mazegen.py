@@ -170,44 +170,44 @@ maze = np.empty((24, 33), dtype=np.uint8)
 
 screen = np.empty((24, 40), dtype=np.uint8)
 
-tiledown = 0x1
-tileup = 0x2
-tileright = 0x4
-tileleft= 0x8
-tilehorz = tileleft | tileright
-tilevert = tileup | tiledown
-dir_mask = 0x0f
-tiledot = 0x10
+TILE_DOWN = 0x1
+TILE_UP = 0x2
+TILE_RIGHT = 0x4
+TILE_LEFT= 0x8
+TILE_HORZ = TILE_LEFT | TILE_RIGHT
+TILE_VERT = TILE_UP | TILE_DOWN
+DIR_MASK = 0x0f
+TILE_DOT = 0x10
 
-vpath_num = 7
-box_width = 4
-vpath_col_spacing = box_width + 1
+VPATH_NUM = 7
+BOX_WIDTH = 4
+VPATH_COL_SPACING = BOX_WIDTH + 1
 vpath_cols = [
-    1 + 0 * vpath_col_spacing,
-    1 + 1 * vpath_col_spacing,
-    1 + 2 * vpath_col_spacing,
-    1 + 3 * vpath_col_spacing,
-    1 + 4 * vpath_col_spacing,
-    1 + 5 * vpath_col_spacing,
-    1 + 6 * vpath_col_spacing,
+    1 + 0 * VPATH_COL_SPACING,
+    1 + 1 * VPATH_COL_SPACING,
+    1 + 2 * VPATH_COL_SPACING,
+    1 + 3 * VPATH_COL_SPACING,
+    1 + 4 * VPATH_COL_SPACING,
+    1 + 5 * VPATH_COL_SPACING,
+    1 + 6 * VPATH_COL_SPACING,
     ]
 vpath_top_tile = [
-    tiledot|tiledown|tileright,
-    tiledot|tiledown|tileleft|tileright,
-    tiledot|tiledown|tileleft|tileright,
-    tiledot|tiledown|tileleft|tileright,
-    tiledot|tiledown|tileleft|tileright,
-    tiledot|tiledown|tileleft|tileright,
-    tiledot|tiledown|tileleft,
+    TILE_DOT | TILE_DOWN | TILE_RIGHT,
+    TILE_DOT | TILE_DOWN | TILE_LEFT | TILE_RIGHT,
+    TILE_DOT | TILE_DOWN | TILE_LEFT | TILE_RIGHT,
+    TILE_DOT | TILE_DOWN | TILE_LEFT | TILE_RIGHT,
+    TILE_DOT | TILE_DOWN | TILE_LEFT | TILE_RIGHT,
+    TILE_DOT | TILE_DOWN | TILE_LEFT | TILE_RIGHT,
+    TILE_DOT | TILE_DOWN | TILE_LEFT,
     ]
 vpath_bot_tile = [
-    tiledot|tileup|tileright,
-    tiledot|tileup|tileleft|tileright,
-    tiledot|tileup|tileleft|tileright,
-    tiledot|tileup|tileleft|tileright,
-    tiledot|tileup|tileleft|tileright,
-    tiledot|tileup|tileleft|tileright,
-    tiledot|tileup|tileleft,
+    TILE_DOT | TILE_UP | TILE_RIGHT,
+    TILE_DOT | TILE_UP | TILE_LEFT | TILE_RIGHT,
+    TILE_DOT | TILE_UP | TILE_LEFT | TILE_RIGHT,
+    TILE_DOT | TILE_UP | TILE_LEFT | TILE_RIGHT,
+    TILE_DOT | TILE_UP | TILE_LEFT | TILE_RIGHT,
+    TILE_DOT | TILE_UP | TILE_LEFT | TILE_RIGHT,
+    TILE_DOT | TILE_UP | TILE_LEFT,
     ]
 
 # up/down/left/right would be 0xf, but this is not legal for ghost legs
@@ -260,24 +260,24 @@ curseschars = None
 
 # Screen has rows 0 - 23
 # Maze is rows 1 - 22
-mazetoprow = 1
-mazebotrow = 22
-screenrows = 24
+MAZE_TOP_ROW = 1
+MAZE_BOT_ROW = 22
+SCREEN_ROWS = 24
 
 # Screen has cols 0 - 39
 # cols 0 - 32 are the maze, of which 1 - 31 are actually used
 #  0 and 32 are border tiles having the value zero
 # cols 33 - 39 is the score area
-mazeleftcol = 1
-mazerightcol = 31
-mazescorecol = 33
-p1scorerow = 2
-p2scorerow = 5
-screencols = 40
+MAZE_LEFT_COL = 1
+MAZE_RIGHT_COL = 31
+MAZE_SCORE_COL = 33
+P1_SCORE_ROW = 2
+P2_SCORE_ROW = 5
+SCREEN_COLS = 40
 
 # Orbiter goes around the outside border, but not through the maze
-orbiterstartcol = mazerightcol
-orbiterstartrow = (mazetoprow + mazebotrow) / 2
+ORBITER_START_COL = MAZE_RIGHT_COL
+ORBITER_START_ROW = (MAZE_TOP_ROW + MAZE_BOT_ROW) / 2
 
 
 ##### Utility functions
@@ -323,10 +323,10 @@ def get_col_randomizer():
 
 def clear_maze():
     y = 0
-    while y < screenrows:
+    while y < SCREEN_ROWS:
         addr = mazerow(y)
         x = 0
-        while x < mazescorecol:
+        while x < MAZE_SCORE_COL:
             addr[x] = 0
             x += 1
         y += 1
@@ -335,22 +335,22 @@ def clear_maze():
 # Set all elements in a row to dot + left + right; only top and bottom
 def setrow(row):
     addr = mazerow(row)
-    x = mazeleftcol
-    while x <= mazerightcol:
-        addr[x] = tiledot|tileleft|tileright
+    x = MAZE_LEFT_COL
+    while x <= MAZE_RIGHT_COL:
+        addr[x] = TILE_DOT|TILE_LEFT|TILE_RIGHT
         x += 1
 
 # Create all 7 vpaths, using top/bot character from a list to handle both
 # corners and T connections.
 def setvpath(col):
     x = vpath_cols[col]
-    y = mazetoprow
+    y = MAZE_TOP_ROW
     addr = mazerow(y)
     addr[x] = vpath_top_tile[col]
     y += 1
-    while y < mazebotrow:
+    while y < MAZE_BOT_ROW:
         addr = mazerow(y)
-        addr[x] = tiledot|tileup|tiledown
+        addr[x] = TILE_DOT|TILE_UP|TILE_DOWN
         y += 1
     addr = mazerow(y)
     addr[x] = vpath_bot_tile[col]
@@ -368,31 +368,31 @@ def setvpath(col):
 def sethpath(col):
     x1_save = vpath_cols[col - 1]
     x2 = vpath_cols[col]
-    y = mazetoprow
+    y = MAZE_TOP_ROW
     start_box(y, x1_save)
     y += get_rand_spacing()
-    while y < mazebotrow - 1:
+    while y < MAZE_BOT_ROW - 1:
         addr = mazerow(y)
 
         # If not working on the rightmost column, check to see there are
         # no cross-throughs.
-        if col < vpath_num - 1:
+        if col < VPATH_NUM - 1:
             tile = addr[x2]
-            if tile & tileright:
+            if tile & TILE_RIGHT:
                 maze_log.debug("at y=%d on col %d, found same hpath level at col %d" % (y, col, col + 1))
                 y -= 1
                 addr = mazerow(y)
         add_box(y)
 
         x = x1_save
-        addr[x] = tiledot|tileup|tiledown|tileright
+        addr[x] = TILE_DOT | TILE_UP | TILE_DOWN | TILE_RIGHT
         x += 1
         while x < x2:
-            addr[x] = tiledot|tileleft|tileright
+            addr[x] = TILE_DOT | TILE_LEFT | TILE_RIGHT
             x += 1
-        addr[x2] = tiledot|tileup|tiledown|tileleft
+        addr[x2] = TILE_DOT | TILE_UP | TILE_DOWN | TILE_LEFT
         y += get_rand_spacing()
-    add_box(mazebotrow)
+    add_box(MAZE_BOT_ROW)
 
 
 def init_maze():
@@ -400,11 +400,11 @@ def init_maze():
 
     # Draw top and bottom; no intersections anywhere. Corners and T
     # intesections will be placed in setvpath
-    setrow(mazetoprow)
-    setrow(mazebotrow)
+    setrow(MAZE_TOP_ROW)
+    setrow(MAZE_BOT_ROW)
 
     # Draw all vpaths, including corners and top/bot T intersections
-    counter = vpath_num
+    counter = VPATH_NUM
     counter -= 1
     while counter >= 0:
         setvpath(counter)
@@ -413,7 +413,7 @@ def init_maze():
     # Draw connectors between vpaths, starting with the rightmost column and
     # the one immediately left of it. This is performed 6 times because it
     # always needs a pair of columns to work with.
-    counter = vpath_num
+    counter = VPATH_NUM
     counter -= 1
     while counter > 0:  # note >, not >=
         sethpath(counter)
@@ -428,7 +428,7 @@ def init_maze():
 # because they are always a fixed distance away) and a list of rows.
 #
 # To examine the boundary of each box to check for dots, the top row and the
-# bottom row must look at box_width + 2 tiles, all the middle rows only have to
+# bottom row must look at BOX_WIDTH + 2 tiles, all the middle rows only have to
 # check the left and right tiles
 #
 # The entire list of rows doesn't need to be stored, either; only the top and
@@ -448,7 +448,8 @@ def init_maze():
 # 03 X|XXXX|XXXX|XXXX|XXXX|XXXX|XXXX|X_______
 # 04 X|XXXX|XXXX|XXXX|XXXX+----+XXXX|X_______
 
-level_boxes = [0] * 10 * 6 * 8
+NUM_LEVEL_BOX_PARAMS = 3
+level_boxes = [0] * 10 * 6 * NUM_LEVEL_BOX_PARAMS
 
 # Box painting will be in hires so this array will become a tracker for the
 # hires display. It will need y address, y end address, x byte number. It's
@@ -457,8 +458,8 @@ level_boxes = [0] * 10 * 6 * 8
 # even more active at one time, so for safety use 16 as possible max.
 #
 # player #, xbyte, ytop, ybot
-num_box_painting_params = 4
-box_painting = [0] * num_box_painting_params * 16
+NUM_BOX_PAINTING_PARAMS = 4
+box_painting = [0] * NUM_BOX_PAINTING_PARAMS * 16
 
 def init_boxes():
     zp.next_level_box = 0
@@ -473,7 +474,7 @@ def add_box(r):
     level_boxes[i + 1] = zp.box_row_save
     level_boxes[i + 2] = r
     zp.box_row_save = r
-    zp.next_level_box += 3
+    zp.next_level_box += NUM_LEVEL_BOX_PARAMS
 
 def finish_boxes():
     i = zp.next_level_box
@@ -504,7 +505,7 @@ def check_boxes():
                 dot |= addr[c] | addr[c + 5]
                 r1 += 1
 
-            if (dot & tiledot) == 0:
+            if (dot & TILE_DOT) == 0:
                 # No dots anywhere! Start painting
                 mark_box_for_painting(r1_save, r2, c + 1)
                 num_rows = r2 - r1_save
@@ -514,17 +515,17 @@ def check_boxes():
         x += 3
 
 def mark_box_for_painting(r1, r2, c):
-    box_log.debug("Marking box, player $%d @ %d,%d -> %d,%d" % (zp.current_player, r1, c, r2, c + box_width))
+    box_log.debug("Marking box, player $%d @ %d,%d -> %d,%d" % (zp.current_player, r1, c, r2, c + BOX_WIDTH))
     x = 0
-    while x < num_box_painting_params * 16:
+    while x < NUM_BOX_PAINTING_PARAMS * 16:
         if box_painting[x] == 0:
             box_painting[x] = c
             box_painting[x + 1] = r1
             box_painting[x + 2] = r2
             box_painting[x + 3] = zp.current_player
             break
-        x += num_box_painting_params
-    pad.addstr(27, 0, "starting box, player @ %d %d,%d -> %d,%d" % (zp.current_player, r1, c, r2, c + box_width))
+        x += NUM_BOX_PAINTING_PARAMS
+    pad.addstr(27, 0, "starting box, player @ %d %d,%d -> %d,%d" % (zp.current_player, r1, c, r2, c + BOX_WIDTH))
 
 
 ##### Gameplay storage
@@ -545,7 +546,7 @@ player_start_col = [
 
 # Hardcoded, up to 8 enemies because there are max of 7 vpaths + 1 orbiter
 # Enemy #0 is the orbiter
-max_enemies = 8
+MAX_ENEMIES = 8
 enemy_col = [0, 0, 0, 0, 0, 0, 0, 0]  # current tile column
 enemy_row = [0, 0, 0, 0, 0, 0, 0, 0]  # current tile row
 enemy_updown = [0, 0, 0, 0, 0, 0, 0, 0]  # preferred direction
@@ -556,7 +557,7 @@ round_robin_up = [0, 0, 0, 0, 0, 0, 0]
 round_robin_down = [0, 0, 0, 0, 0, 0, 0]
 
 # Hardcoded, up to 4 players
-max_players = 4
+MAX_PLAYERS = 4
 player_col = [0, 0, 0, 0]  # current tile col
 player_row = [0, 0, 0, 0]  # current tile row
 player_input_dir = [0, 0, 0, 0]  # current joystick input direction
@@ -575,22 +576,22 @@ PLAYER_REGENERATING = 3
 
 # Scores
 
-dot_score = 10
-paint_score_per_line = 100
+DOT_SCORE = 10
+PAINT_SCORE_PER_LINE = 100
 
 ##### Gameplay initialization
 
 def init_enemies():
-    enemy_col[0] = orbiterstartcol
-    enemy_row[0] = orbiterstartrow
-    enemy_dir[0] = tileup
+    enemy_col[0] = ORBITER_START_COL
+    enemy_row[0] = ORBITER_START_ROW
+    enemy_dir[0] = TILE_UP
     x = 1
     randcol = get_col_randomizer()
     while x < zp.num_enemies:
         enemy_col[x] = randcol[x]
-        enemy_row[x] = mazetoprow
-        enemy_updown[x] = tiledown
-        enemy_dir[x] = tiledown
+        enemy_row[x] = MAZE_TOP_ROW
+        enemy_updown[x] = TILE_DOWN
+        enemy_dir[x] = TILE_DOWN
         enemy_target_col[x] = 0  # Arbitrary, just need valid default
         x += 1
     round_robin_up[:] = get_col_randomizer()
@@ -600,7 +601,7 @@ def init_enemies():
 def init_player():
     addr = player_start_col[zp.num_players]
     player_col[zp.current_player] = addr[zp.current_player]
-    player_row[zp.current_player] = mazebotrow
+    player_row[zp.current_player] = MAZE_BOT_ROW
     player_input_dir[zp.current_player] = 0
     player_dir[zp.current_player] = 0
     player_lives[zp.current_player] = 3
@@ -730,28 +731,28 @@ def get_player_sprite():
 # Determine which of the 4 directions is allowed at the given row, col
 def get_allowed_dirs(r, c):
     addr = mazerow(r)
-    allowed = addr[c] & dir_mask
+    allowed = addr[c] & DIR_MASK
     return allowed
 
 # See if current tile has a dot
 def has_dot(r, c):
     addr = mazerow(r)
-    return addr[c] & tiledot
+    return addr[c] & TILE_DOT
 
 # clear a dot
 def clear_dot(r, c):
     addr = mazerow(r)
-    addr[c] &= ~tiledot
+    addr[c] &= ~TILE_DOT
 
 # Determine the tile location given the direction of the actor's movement
 def get_next_tile(r, c, dir):
-    if dir & tileup:
+    if dir & TILE_UP:
         r -= 1
-    elif dir & tiledown:
+    elif dir & TILE_DOWN:
         r += 1
-    elif dir & tileleft:
+    elif dir & TILE_LEFT:
         c -= 1
-    elif dir & tileright:
+    elif dir & TILE_RIGHT:
         c += 1
     else:
         logic_log.error("bad direction % dir")
@@ -762,13 +763,13 @@ def get_next_round_robin(rr_table, x):
     target_col = rr_table[zp.round_robin_index[x]]
     logic_log.debug("target: %d, indexes=%s, table=%s" % (target_col, str(zp.round_robin_index), rr_table))
     zp.round_robin_index[x] += 1
-    if zp.round_robin_index[x] >= vpath_num:
+    if zp.round_robin_index[x] >= VPATH_NUM:
         zp.round_robin_index[x] = 0
     return target_col
 
 # Find target column when enemy reaches top or bottom
 def get_target_col(c, allowed_vert):
-    if allowed_vert & tileup:
+    if allowed_vert & TILE_UP:
         x = 1
         rr_table = round_robin_up
     else:
@@ -781,9 +782,9 @@ def get_target_col(c, allowed_vert):
         target_col = get_next_round_robin(rr_table, x)
 
     if target_col < c:
-        current = tileleft
+        current = TILE_LEFT
     else:
-        current = tileright
+        current = TILE_RIGHT
     enemy_target_col[zp.current_enemy] = target_col
     return current
 
@@ -805,10 +806,10 @@ def move_orbiter():
         # Can't continue, and because we must be at a corner, turn 90 degrees.
         # So, if we are moving vertically, go horizontally, and vice versa.
 
-        if current & tilevert:
-            current = allowed & tilehorz
+        if current & TILE_VERT:
+            current = allowed & TILE_HORZ
         else:
-            current = allowed & tilevert
+            current = allowed & TILE_VERT
         enemy_dir[0] = current
 
 
@@ -823,13 +824,13 @@ def move_enemy():
     allowed = get_allowed_dirs(r, c)
     updown = enemy_updown[zp.current_enemy]
 
-    allowed_horz = allowed & tilehorz
-    allowed_vert = allowed & tilevert
+    allowed_horz = allowed & TILE_HORZ
+    allowed_vert = allowed & TILE_VERT
     if allowed_horz:
         # left or right is available, we must go that way, because that's the
         # Amidar(tm) way
 
-        if allowed_horz == tilehorz:
+        if allowed_horz == TILE_HORZ:
             # *Both* left and right are available, which means we're either in
             # the middle of an box horz segment *or* at the top or bottom (but
             # not at a corner)
@@ -838,14 +839,14 @@ def move_enemy():
                 # At a T junction at the top or bottom. What we do depends on
                 # which direction we approached from
 
-                if current & tilevert:
+                if current & TILE_VERT:
                     # approaching vertically means go L or R; choose direction
                     # based on a round robin so the enemy doesn't go back up
                     # the same path. Sets the target column for this enemy to
                     # be used when approaching the T horizontally
                     current = get_target_col(c, allowed_vert)
 
-                    if allowed_vert & tileup:
+                    if allowed_vert & TILE_UP:
                         logic_log.debug("enemy %d: at bot T, new dir %x, col=%d target=%d" % (zp.current_enemy, current, c, enemy_target_col[zp.current_enemy]))
                     else:
                         logic_log.debug("enemy %d: at top T, new dir %x, col=%d target=%d" % (zp.current_enemy, current, c, enemy_target_col[zp.current_enemy]))
@@ -858,14 +859,14 @@ def move_enemy():
                         updown = allowed_vert
                         current = allowed_vert
 
-                        if allowed_vert & tileup:
+                        if allowed_vert & TILE_UP:
                             logic_log.debug("enemy %d: at bot T, reached target=%d, going up" % (zp.current_enemy, c))
                         else:
                             logic_log.debug("enemy %d: at top T, reached target=%d, going down" % (zp.current_enemy, c))
                     else:
                         # skip this vertical, keep on moving
 
-                        if allowed_vert & tileup:
+                        if allowed_vert & TILE_UP:
                             logic_log.debug("enemy %d: at bot T, col=%d target=%d; skipping" % (zp.current_enemy, c, enemy_target_col[zp.current_enemy]))
                         else:
                             logic_log.debug("enemy %d: at top T, col=%d target=%d; skipping" % (zp.current_enemy, c, enemy_target_col[zp.current_enemy]))
@@ -878,10 +879,10 @@ def move_enemy():
         else:
             # only one horizontal dir is available
 
-            if allowed_vert == tilevert:
+            if allowed_vert == TILE_VERT:
                 # At a left or right T junction...
 
-                if current & tilevert:
+                if current & TILE_VERT:
                     # moving vertically. Have to take the horizontal path
                     current = allowed_horz
                     logic_log.debug("enemy %d: taking hpath, start moving %s" % (zp.current_enemy, str_dirs(current)))
@@ -894,12 +895,12 @@ def move_enemy():
                 # At a corner, because this tile has exactly one vertical and
                 # one horizontal path.
 
-                if current & tilevert:
+                if current & TILE_VERT:
                     # moving vertically, and because this is a corner, the
                     # target column must be set up
                     current = get_target_col(c, allowed_vert)
 
-                    if allowed_horz & tileleft:
+                    if allowed_horz & TILE_LEFT:
                         logic_log.debug("enemy %d: at right corner col=%d, heading left to target=%d" % (zp.current_enemy, c, enemy_target_col[zp.current_enemy]))
                     else:
                         logic_log.debug("enemy %d: at left corner col=%d, heading right to target=%d" % (zp.current_enemy, c, enemy_target_col[zp.current_enemy]))
@@ -908,7 +909,7 @@ def move_enemy():
                     # here, the target column must also be this column
                     current = allowed_vert
                     updown = allowed_vert
-                    if allowed_vert & tileup:
+                    if allowed_vert & TILE_UP:
                         logic_log.debug("enemy %d: at bot corner col=%d with target %d, heading up" % (zp.current_enemy, c, enemy_target_col[zp.current_enemy]))
                     else:
                         logic_log.debug("enemy %d: at top corner col=%d with target=%d, heading down" % (zp.current_enemy, c, enemy_target_col[zp.current_enemy]))
@@ -981,9 +982,9 @@ def check_dots():
 
         # Update maze here so we can check which player closed off a box
         addr = mazerow(r)
-        addr[c] &= ~tiledot
+        addr[c] &= ~TILE_DOT
 
-        player_score[zp.current_player] += dot_score
+        player_score[zp.current_player] += DOT_SCORE
 
 def update_background():
     zp.current_player = 0
@@ -996,7 +997,7 @@ def update_background():
             r = dot_eaten_row[zp.current_player]
             c = dot_eaten_col[zp.current_player]
             addr = screenrow(r)
-            addr[c] &= ~tiledot
+            addr[c] &= ~TILE_DOT
 
             # mark as completed
             dot_eaten_col[zp.current_player] = 255
@@ -1008,7 +1009,7 @@ def update_background():
 def paint_boxes():
     x = 0
     pad.addstr(28, 0, "Checking box:")
-    while x < num_box_painting_params * 16:
+    while x < NUM_BOX_PAINTING_PARAMS * 16:
         pad.addstr(29, x, "%d   " % x)
         if box_painting[x] > 0:
             c1 = box_painting[x]
@@ -1018,7 +1019,7 @@ def paint_boxes():
             box_log.debug("Painting box line, player %d at %d,%d" % (i, r1, c1))
             pad.addstr(30, 0, "painting box line at %d,%d" % (r1, c1))
             addr = screenrow(r1)
-            for c in range(box_width):
+            for c in range(BOX_WIDTH):
                 if i == 0:
                     addr[c1 + c] = ord("X")
                 else:
@@ -1028,16 +1029,16 @@ def paint_boxes():
             box_painting[x + 1] = r1
             if r1 >= r2:
                 box_painting[x] = 0
-        x += num_box_painting_params
+        x += NUM_BOX_PAINTING_PARAMS
 
 def init_static_background():
-    pad.addstr(p1scorerow, mazescorecol, "Player1")
-    pad.addstr(p2scorerow, mazescorecol, "Player2")
+    pad.addstr(P1_SCORE_ROW, MAZE_SCORE_COL, "Player1")
+    pad.addstr(P2_SCORE_ROW, MAZE_SCORE_COL, "Player2")
 
 
 def update_score():
-    pad.addstr(p1scorerow+1, mazescorecol, " %05d" % player_score[0])
-    pad.addstr(p2scorerow+1, mazescorecol, " %05d" % player_score[1])
+    pad.addstr(P1_SCORE_ROW+1, MAZE_SCORE_COL, " %05d" % player_score[0])
+    pad.addstr(P2_SCORE_ROW+1, MAZE_SCORE_COL, " %05d" % player_score[1])
 
 
 ##### User input routines
@@ -1061,24 +1062,24 @@ def read_curses():
         config_quit = 1
 
     if key == curses.KEY_UP:
-        player_input_dir[0] = tileup
+        player_input_dir[0] = TILE_UP
     elif key == curses.KEY_DOWN:
-        player_input_dir[0] = tiledown
+        player_input_dir[0] = TILE_DOWN
     elif key == curses.KEY_LEFT:
-        player_input_dir[0] = tileleft
+        player_input_dir[0] = TILE_LEFT
     elif key == curses.KEY_RIGHT:
-        player_input_dir[0] = tileright
+        player_input_dir[0] = TILE_RIGHT
     else:
         player_input_dir[0] = 0
 
     if key == ord(',') or key == ord('.'):
-        player_input_dir[1] = tileup
+        player_input_dir[1] = TILE_UP
     elif key == ord('o'):
-        player_input_dir[1] = tiledown
+        player_input_dir[1] = TILE_DOWN
     elif key == ord('a'):
-        player_input_dir[1] = tileleft
+        player_input_dir[1] = TILE_LEFT
     elif key == ord('e'):
-        player_input_dir[1] = tileright
+        player_input_dir[1] = TILE_RIGHT
     else:
         player_input_dir[1] = 0
 
@@ -1134,13 +1135,13 @@ def game_loop():
 
 def str_dirs(d):
     s = ""
-    if d & tileleft:
+    if d & TILE_LEFT:
         s += "L"
-    if d & tileright:
+    if d & TILE_RIGHT:
         s += "R"
-    if d & tileup:
+    if d & TILE_UP:
         s += "U"
-    if d & tiledown:
+    if d & TILE_DOWN:
         s += "D"
     return s
 
