@@ -119,8 +119,87 @@ def init_screen(*args, **kwargs):
 
 
 def main():
+    while True:
+        wipe_down()
+        wipe_title()
+        if config_quit:
+            return
+
+
+def read_menu_input():
+    global config_quit, config_start
+
+    read_user_input()
+    if config_quit:
+        sys.exit()
+    if config_start:
+        play_game()
+    config_quit = 0
+    config_start = 0
+
+
+def clear_line(y, c):
+    addr = screenrow(y)
+    x = 0
+    while x < SCREEN_COLS:
+        addr[x] = c
+        x += 1
+
+
+def wipe_down():
+    y = 0
+    while y < SCREEN_ROWS:
+        read_menu_input()
+        clear_line(y, 0)
+        show_screen()
+        time.sleep(.02)
+        y += 1
+
+
+def wipe_title():
+    y = 0
+    while y < 10:
+        read_menu_input()
+        clear_line(y, 32)
+        show_screen()
+        time.sleep(.02)
+        y += 1
+    i = 0
+    while i < len(title_text):
+        read_menu_input()
+        x = 0
+        addr = screenrow(y)
+        while x < SCREEN_COLS:
+            addr[x] = ord(title_text[i][x])
+            x += 1
+        show_screen()
+        time.sleep(.02)
+        y += 1
+        i += 1
+    while y < SCREEN_ROWS:
+        read_menu_input()
+        clear_line(y, 32)
+        show_screen()
+        time.sleep(.02)
+        y += 1
+    i = TITLE_SCREEN_TIME
+    while i >= 0:
+        read_menu_input()
+        show_screen()
+        time.sleep(.02)
+        i -= 1
+
+
+title_text = [
+    "              LINE 1                    ",
+    "              LINE 2                    ",
+    "              LINE 3                    ",
+    "              LINE 4                    ",
+]
+
+
+def play_game():
     init_maze()
-    print_maze()
     screen[:,0:33] = maze
 
     show_screen()
@@ -133,7 +212,6 @@ def main():
     init_static_background()
 
     game_loop()
-    print_maze()
 
 ##### Memory usage
 
@@ -530,6 +608,7 @@ def mark_box_for_painting(r1, r2, c):
 
 config_num_players = 1
 config_quit = 0
+config_start = 0
 
 level = -1
 level_enemies = [255, 4, 5, 6, 7, 8]  # level starts counting from 1, so dummy zeroth level info
@@ -642,7 +721,8 @@ exploding_char = ['*', '*', '@', '#', '\\', '-', '/', '|', '\\', '-', '/', '|', 
 EXPLODING_TIME = len(exploding_char) - 1
 DEAD_TIME = 40
 REGENERATING_TIME = 60
-
+END_GAME_TIME = 100
+TITLE_SCREEN_TIME = 100
 
 # Erase sprites in reverse order that they're drawn to restore the background
 # properly
@@ -732,6 +812,8 @@ def get_player_sprite():
         player_frame_counter[zp.current_player] -= 1
         if player_frame_counter[zp.current_player] <= 0:
             player_status[zp.current_player] = PLAYER_ALIVE
+    else:
+        c = None
     return c
 
 
@@ -1077,7 +1159,7 @@ def read_user_input():
         read_curses()
 
 def read_curses():
-    global config_quit
+    global config_quit, config_start
 
     key = pad.getch()
     pad.addstr(25, 0, "key = %d   " % key)
@@ -1112,6 +1194,9 @@ def read_curses():
     else:
         player_input_dir[1] = 0
 
+    if key == ord('1'):
+        config_start = 1
+
 
 ##### Game loop
 
@@ -1120,6 +1205,7 @@ def game_loop():
 
     count = 0
     zp.num_sprites_drawn = 0
+    countdown_time = END_GAME_TIME
     while True:
         game_log.debug("Turn %d" % count)
         read_user_input()
@@ -1135,6 +1221,7 @@ def game_loop():
             zp.current_enemy += 1
 
         zp.current_player = 0
+        still_alive = 0
         while zp.current_player < zp.num_players:
             if player_status[zp.current_player] == PLAYER_REGENERATING:
                 # If regenerating, change to alive if the player starts to move
@@ -1148,7 +1235,14 @@ def game_loop():
                 # only check for points if still alive
                 check_dots()
                 check_boxes()
+            if player_status[zp.current_player] != GAME_OVER:
+                still_alive += 1
             zp.current_player += 1
+
+        if still_alive == 0:
+            countdown_time -= 1
+            if countdown_time <= 0:
+                break
 
         erase_sprites()
         update_background()
