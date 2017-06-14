@@ -257,36 +257,45 @@ TILE_VERT = TILE_UP | TILE_DOWN
 DIR_MASK = 0x0f
 TILE_DOT = 0x10
 
-VPATH_NUM = 7
-BOX_WIDTH = 4
+LEFT_TILE = TILE_DOT | TILE_RIGHT
+MIDDLE_TILE = TILE_DOT | TILE_LEFT | TILE_RIGHT
+RIGHT_TILE = TILE_DOT | TILE_LEFT
+
+VPATH_NUM = 6
+if VPATH_NUM == 7:
+    BOX_WIDTH = 4
+else:
+    VPATH_NUM = 6
+    BOX_WIDTH = 5
 VPATH_COL_SPACING = BOX_WIDTH + 1
-vpath_cols = [
-    1 + 0 * VPATH_COL_SPACING,
-    1 + 1 * VPATH_COL_SPACING,
-    1 + 2 * VPATH_COL_SPACING,
-    1 + 3 * VPATH_COL_SPACING,
-    1 + 4 * VPATH_COL_SPACING,
-    1 + 5 * VPATH_COL_SPACING,
-    1 + 6 * VPATH_COL_SPACING,
+
+vpath_cols = [1 + i * VPATH_COL_SPACING for i in range(VPATH_NUM)]
+
+vpath_top_tile = [MIDDLE_TILE | TILE_DOWN] * VPATH_NUM
+vpath_top_tile[0] = LEFT_TILE | TILE_DOWN
+vpath_top_tile[-1] = RIGHT_TILE | TILE_DOWN
+
+vpath_bot_tile = [MIDDLE_TILE | TILE_UP] * VPATH_NUM
+vpath_bot_tile[0] = LEFT_TILE | TILE_UP
+vpath_bot_tile[-1] = RIGHT_TILE | TILE_UP
+
+if VPATH_NUM == 7:
+    player_start_col = [
+        [255, 255, 255, 255],
+        [vpath_cols[3], 0, 0, 0],
+        [vpath_cols[2], vpath_cols[4], 0, 0],
+        [vpath_cols[1], vpath_cols[3], vpath_cols[5], 0],
+        [vpath_cols[0], vpath_cols[2], vpath_cols[4], vpath_cols[6]],
     ]
-vpath_top_tile = [
-    TILE_DOT | TILE_DOWN | TILE_RIGHT,
-    TILE_DOT | TILE_DOWN | TILE_LEFT | TILE_RIGHT,
-    TILE_DOT | TILE_DOWN | TILE_LEFT | TILE_RIGHT,
-    TILE_DOT | TILE_DOWN | TILE_LEFT | TILE_RIGHT,
-    TILE_DOT | TILE_DOWN | TILE_LEFT | TILE_RIGHT,
-    TILE_DOT | TILE_DOWN | TILE_LEFT | TILE_RIGHT,
-    TILE_DOT | TILE_DOWN | TILE_LEFT,
+else:
+    player_start_col = [
+        [255, 255, 255, 255],
+        [(vpath_cols[2] + vpath_cols[3])//2, 0, 0, 0],
+        [vpath_cols[1], vpath_cols[4], 0, 0],
+        [vpath_cols[1], vpath_cols[3], vpath_cols[5], 0],
+        [vpath_cols[0], vpath_cols[2], vpath_cols[4], vpath_cols[5]],
     ]
-vpath_bot_tile = [
-    TILE_DOT | TILE_UP | TILE_RIGHT,
-    TILE_DOT | TILE_UP | TILE_LEFT | TILE_RIGHT,
-    TILE_DOT | TILE_UP | TILE_LEFT | TILE_RIGHT,
-    TILE_DOT | TILE_UP | TILE_LEFT | TILE_RIGHT,
-    TILE_DOT | TILE_UP | TILE_LEFT | TILE_RIGHT,
-    TILE_DOT | TILE_UP | TILE_LEFT | TILE_RIGHT,
-    TILE_DOT | TILE_UP | TILE_LEFT,
-    ]
+
 
 # up/down/left/right would be 0xf, but this is not legal for ghost legs
 tilechars = [
@@ -373,9 +382,10 @@ def screenrow(y):
 def get_rand_spacing():
     return random.randint(3, 5)
 
-# Random number between 0 and 6 (inclusive) used for column starting positions
-def get_rand7():
-    return random.randint(0, 6)
+# Random number between 0 and VPATH_NUM (exclusive) used for column starting
+# positions
+def get_rand_col():
+    return random.randint(0, VPATH_NUM - 1)
 
 def get_rand_byte():
     return random.randint(0, 255)
@@ -386,8 +396,8 @@ def get_col_randomizer():
     r = list(vpath_cols)
     x = 10
     while x >= 0:
-        i1 = get_rand7()
-        i2 = get_rand7()
+        i1 = get_rand_col()
+        i2 = get_rand_col()
         old1 = r[i1]
         r[i1] = r[i2]
         r[i2] = old1
@@ -416,7 +426,7 @@ def setrow(row):
         addr[x] = TILE_DOT|TILE_LEFT|TILE_RIGHT
         x += 1
 
-# Create all 7 vpaths, using top/bot character from a list to handle both
+# Create all vpaths, using top/bot character from a list to handle both
 # corners and T connections.
 def setvpath(col):
     x = vpath_cols[col]
@@ -519,10 +529,17 @@ def init_maze():
 # n can also be used as a flag: if n == 0, the box has already been checked and
 # painted. n == 0xff is the flag to end processing.
 
+# for VPATH_NUM == 7:
 # 01 X/----T----T----T----T----T----\X_______
 # 02 X|XXXX|XXXX|XXXX|XXXX|XXXX|XXXX|X_______
 # 03 X|XXXX|XXXX|XXXX|XXXX|XXXX|XXXX|X_______
 # 04 X|XXXX|XXXX|XXXX|XXXX+----+XXXX|X_______
+
+# for VPATH_NUM == 6:
+# 01 X/-----T-----T-----T-----T-----\X_______
+# 02 X|XXXXX|XXXXX|XXXXX|XXXXX|XXXXX|X_______
+# 03 X|XXXXX|XXXXX|XXXXX|XXXXX|XXXXX|X_______
+# 04 X|XXXXX|XXXXX|XXXXX+-----+XXXXX|X_______
 
 NUM_LEVEL_BOX_PARAMS = 3
 level_boxes = [0] * 10 * 6 * NUM_LEVEL_BOX_PARAMS
@@ -570,15 +587,15 @@ def check_boxes():
             # If there's a dot anywhere, then the box isn't painted. We don't
             # care where it is so we don't need to keep track of individual
             # locations.
-            dot = addr[c] | addr[c + 1] | addr[c + 2] | addr[c + 3] | addr[c + 4] | addr[c + 5]
+            dot = addr[c] | addr[c + 1] | addr[c + 2] | addr[c + 3] | addr[c + 4] | addr[c + 5] | addr[c + BOX_WIDTH + 1]
 
             r2 = level_boxes[x + 2]
             addr = mazerow(r2)
-            dot |= addr[c] | addr[c + 1] | addr[c + 2] | addr[c + 3] | addr[c + 4] | addr[c + 5]
+            dot |= addr[c] | addr[c + 1] | addr[c + 2] | addr[c + 3] | addr[c + 4] | addr[c + 5] | addr[c + BOX_WIDTH + 1]
 
             while r1 < r2:
                 addr = mazerow(r1)
-                dot |= addr[c] | addr[c + 5]
+                dot |= addr[c] | addr[c + BOX_WIDTH + 1]
                 r1 += 1
 
             if (dot & TILE_DOT) == 0:
@@ -613,13 +630,6 @@ config_start = 0
 level = -1
 level_enemies = [255, 4, 5, 6, 7, 8]  # level starts counting from 1, so dummy zeroth level info
 level_speeds = [255, 0, 0, 0, 0, 0]  # probably needs to be 16 bit
-player_start_col = [
-    [255, 255, 255, 255],
-    [vpath_cols[3], 0, 0, 0],
-    [vpath_cols[2], vpath_cols[4], 0, 0],
-    [vpath_cols[1], vpath_cols[3], vpath_cols[5], 0],
-    [vpath_cols[0], vpath_cols[2], vpath_cols[4], vpath_cols[6]],
-]
 player_score_row = [2, 7, 12, 17]
 
 # Hardcoded, up to 8 enemies because there are max of 7 vpaths + 1 orbiter
