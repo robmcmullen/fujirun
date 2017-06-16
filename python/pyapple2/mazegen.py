@@ -691,9 +691,15 @@ PAINT_SCORE_PER_LINE = 100
 ##### Gameplay initialization
 
 def init_enemies():
+    zp.current_enemy = 0
     enemy_col[0] = ORBITER_START_COL
+    enemy_xpixel[0] = 3
+    enemy_xfrac[0] = 0
     enemy_row[0] = ORBITER_START_ROW
+    enemy_ypixel[0] = 2
+    enemy_yfrac[0] = 0
     enemy_dir[0] = TILE_UP
+    set_speed(TILE_UP)
     zp.current_enemy = 1
     randcol = get_col_randomizer()
     while zp.current_enemy < zp.num_enemies:
@@ -914,30 +920,6 @@ def get_target_col(c, allowed_vert):
     enemy_target_col[zp.current_enemy] = target_col
     return current
 
-# Move orbiter
-def move_orbiter():
-    r = enemy_row[0]
-    c = enemy_col[0]
-    current = enemy_dir[0]
-    r, c = get_next_tile(r, c, current)
-    enemy_row[0] = r
-    enemy_col[0] = c
-    allowed = get_allowed_dirs(r, c)
-
-    if allowed & current:
-        # Can continue the current direction, so keep on doing it
-
-        logic_log.debug("orbiter: continuing %s" % str_dirs(current))
-    else:
-        # Can't continue, and because we must be at a corner, turn 90 degrees.
-        # So, if we are moving vertically, go horizontally, and vice versa.
-
-        if current & TILE_VERT:
-            current = allowed & TILE_HORZ
-        else:
-            current = allowed & TILE_VERT
-        enemy_dir[0] = current
-
 def check_midpoint(current):
     # set up decision point flag to see if we have crossed the midpoint
     # after the movement
@@ -975,7 +957,10 @@ def move_enemy():
     if not temp:
         if check_midpoint(current):
             # crossed the midpoint! Make a decision on the next allowed direction
-            decide_direction()
+            if zp.current_enemy == 0:
+                decide_orbiter()
+            else:
+                decide_direction()
 
 def pixel_move(current):
     if current & TILE_UP:
@@ -1006,6 +991,28 @@ def set_speed(current):
     else:
         enemy_xspeed[zp.current_enemy] = level_speeds[zp.level]
         enemy_yspeed[zp.current_enemy] = 0
+
+def decide_orbiter():
+    current = enemy_dir[zp.current_enemy]
+    r = enemy_row[zp.current_enemy]
+    c = enemy_col[zp.current_enemy]
+#    r, c = get_next_tile(r, c, current)
+    allowed = get_allowed_dirs(r, c)
+
+    if allowed & current:
+        # Can continue the current direction, so keep on doing it
+
+        logic_log.debug("orbiter: continuing %s" % str_dirs(current))
+    else:
+        # Can't continue, and because we must be at a corner, turn 90 degrees.
+        # So, if we are moving vertically, go horizontally, and vice versa.
+
+        if current & TILE_VERT:
+            current = allowed & TILE_HORZ
+        else:
+            current = allowed & TILE_VERT
+        enemy_dir[0] = current
+        set_speed(current)
 
 def decide_direction():
     current = enemy_dir[zp.current_enemy]
@@ -1307,6 +1314,7 @@ def game_loop():
     count = 0
     zp.num_sprites_drawn = 0
     countdown_time = END_GAME_TIME
+    time_0 = time.time()
     while True:
         game_log.debug("Turn %d" % count)
         read_user_input()
@@ -1315,8 +1323,6 @@ def game_loop():
         game_log.debug(chr(12))
 
         zp.current_enemy = 0
-        move_orbiter()  # always enemy #0
-        zp.current_enemy += 1
         while zp.current_enemy < zp.num_enemies:
             move_enemy()
             zp.current_enemy += 1
@@ -1350,7 +1356,9 @@ def game_loop():
         draw_enemies()
         draw_players()
         show_screen()
-        time.sleep(.02)
+        time.sleep(.01)
+        if count % 50 == 0:
+            pad.addstr(20, MAZE_SCORE_COL, "%f" % (time.time() - time_0))
 
         count += 1
 
