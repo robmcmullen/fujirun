@@ -641,17 +641,17 @@ X_MIDPOINT = 3
 X_TILEMAX = 7
 Y_MIDPOINT = 3
 Y_TILEMAX = 8
-enemy_col = [0, 0, 0, 0, 0, 0, 0, 0]  # current tile column
-enemy_xpixel = [0, 0, 0, 0, 0, 0, 0, 0]  # current pixel offset in col
-enemy_xfrac = [0, 0, 0, 0, 0, 0, 0, 0]  # current fractional pixel
-enemy_xspeed = [0, 0, 0, 0, 0, 0, 0, 0]  # current speed (affects fractional)
-enemy_row = [0, 0, 0, 0, 0, 0, 0, 0]  # current tile row
-enemy_ypixel = [0, 0, 0, 0, 0, 0, 0, 0]  # current pixel offset in row
-enemy_yfrac = [0, 0, 0, 0, 0, 0, 0, 0]  # current fractional pixel
-enemy_yspeed = [0, 0, 0, 0, 0, 0, 0, 0]  # current speed (affects fractional)
-enemy_updown = [0, 0, 0, 0, 0, 0, 0, 0]  # preferred direction
-enemy_dir = [0, 0, 0, 0, 0, 0, 0, 0]  # actual direction
-enemy_target_col = [0, 0, 0, 0, 0, 0, 0, 0]  # target column at bot or top T
+actor_col = [0, 0, 0, 0, 0, 0, 0, 0]  # current tile column
+actor_xpixel = [0, 0, 0, 0, 0, 0, 0, 0]  # current pixel offset in col
+actor_xfrac = [0, 0, 0, 0, 0, 0, 0, 0]  # current fractional pixel
+actor_xspeed = [0, 0, 0, 0, 0, 0, 0, 0]  # current speed (affects fractional)
+actor_row = [0, 0, 0, 0, 0, 0, 0, 0]  # current tile row
+actor_ypixel = [0, 0, 0, 0, 0, 0, 0, 0]  # current pixel offset in row
+actor_yfrac = [0, 0, 0, 0, 0, 0, 0, 0]  # current fractional pixel
+actor_yspeed = [0, 0, 0, 0, 0, 0, 0, 0]  # current speed (affects fractional)
+actor_updown = [0, 0, 0, 0, 0, 0, 0, 0]  # preferred direction
+actor_dir = [0, 0, 0, 0, 0, 0, 0, 0]  # actual direction
+actor_target_col = [0, 0, 0, 0, 0, 0, 0, 0]  # target column at bot or top T
 
 round_robin_up = [0, 0, 0, 0, 0, 0, 0]
 round_robin_down = [0, 0, 0, 0, 0, 0, 0]
@@ -692,26 +692,26 @@ PAINT_SCORE_PER_LINE = 100
 
 def init_enemies():
     zp.current_enemy = 0
-    enemy_col[0] = ORBITER_START_COL
-    enemy_xpixel[0] = 3
-    enemy_xfrac[0] = 0
-    enemy_row[0] = ORBITER_START_ROW
-    enemy_ypixel[0] = 2
-    enemy_yfrac[0] = 0
-    enemy_dir[0] = TILE_UP
+    actor_col[0] = ORBITER_START_COL
+    actor_xpixel[0] = 3
+    actor_xfrac[0] = 0
+    actor_row[0] = ORBITER_START_ROW
+    actor_ypixel[0] = 2
+    actor_yfrac[0] = 0
+    actor_dir[0] = TILE_UP
     set_speed(TILE_UP)
     zp.current_enemy = 1
     randcol = get_col_randomizer()
     while zp.current_enemy < zp.num_enemies:
-        enemy_col[zp.current_enemy] = randcol[zp.current_enemy]
-        enemy_xpixel[zp.current_enemy] = 3
-        enemy_xfrac[zp.current_enemy] = 0
-        enemy_row[zp.current_enemy] = MAZE_TOP_ROW
-        enemy_ypixel[zp.current_enemy] = 4
-        enemy_yfrac[zp.current_enemy] = 0
-        enemy_updown[zp.current_enemy] = TILE_DOWN
-        enemy_dir[zp.current_enemy] = TILE_DOWN
-        enemy_target_col[zp.current_enemy] = 0  # Arbitrary, just need valid default
+        actor_col[zp.current_enemy] = randcol[zp.current_enemy]
+        actor_xpixel[zp.current_enemy] = 3
+        actor_xfrac[zp.current_enemy] = 0
+        actor_row[zp.current_enemy] = MAZE_TOP_ROW
+        actor_ypixel[zp.current_enemy] = 4
+        actor_yfrac[zp.current_enemy] = 0
+        actor_updown[zp.current_enemy] = TILE_DOWN
+        actor_dir[zp.current_enemy] = TILE_DOWN
+        actor_target_col[zp.current_enemy] = 0  # Arbitrary, just need valid default
         set_speed(TILE_DOWN)
         zp.current_enemy += 1
     round_robin_up[:] = get_col_randomizer()
@@ -799,12 +799,12 @@ def draw_sprite(r, c, sprite):
 def draw_enemies():
     zp.current_enemy = 0
     while zp.current_enemy < zp.num_enemies:
-        r = enemy_row[zp.current_enemy]
-        c = enemy_col[zp.current_enemy]
+        r = actor_row[zp.current_enemy]
+        c = actor_col[zp.current_enemy]
         sprite = get_enemy_sprite()
         draw_sprite(r, c, sprite)
 
-        #enemy_history[i].append((r, c))
+        #actor_history[i].append((r, c))
         zp.current_enemy += 1
 
 def draw_players():
@@ -917,41 +917,41 @@ def get_target_col(c, allowed_vert):
         current = TILE_LEFT
     else:
         current = TILE_RIGHT
-    enemy_target_col[zp.current_enemy] = target_col
+    actor_target_col[zp.current_enemy] = target_col
     return current
 
 def check_midpoint(current):
     # set up decision point flag to see if we have crossed the midpoint
     # after the movement
     if current & TILE_VERT:
-        sub = enemy_ypixel[zp.current_enemy]
+        sub = actor_ypixel[zp.current_enemy]
         return sub == Y_MIDPOINT
     else:
-        sub = enemy_xpixel[zp.current_enemy]
+        sub = actor_xpixel[zp.current_enemy]
         return sub == X_MIDPOINT
 
 # Move enemy given the enemy index
 def move_enemy():
-    current = enemy_dir[zp.current_enemy]
+    current = actor_dir[zp.current_enemy]
 
     # check sub-pixel location to see if we've reached a decision point
     temp = check_midpoint(current)
     pixel_move(current)
     # check if moved to next tile. pixel fraction stays the same to keep
     # the speed consistent, only the pixel gets adjusted
-    if enemy_xpixel[zp.current_enemy] < 0:
-        enemy_col[zp.current_enemy] -= 1
-        enemy_xpixel[zp.current_enemy] += X_TILEMAX
-    elif enemy_xpixel[zp.current_enemy] >= X_TILEMAX:
-        enemy_col[zp.current_enemy] += 1
-        enemy_xpixel[zp.current_enemy] -= X_TILEMAX
-    elif enemy_ypixel[zp.current_enemy] < 0:
-        enemy_row[zp.current_enemy] -= 1
-        enemy_ypixel[zp.current_enemy] += Y_TILEMAX
-    elif enemy_ypixel[zp.current_enemy] >= Y_TILEMAX:
-        enemy_row[zp.current_enemy] += 1
-        enemy_ypixel[zp.current_enemy] -= Y_TILEMAX
-    s = "#%d: tile=%d,%d pix=%d,%d frac=%d,%d  " % (zp.current_enemy, enemy_col[zp.current_enemy], enemy_row[zp.current_enemy], enemy_xpixel[zp.current_enemy], enemy_ypixel[zp.current_enemy], enemy_xfrac[zp.current_enemy], enemy_yfrac[zp.current_enemy])
+    if actor_xpixel[zp.current_enemy] < 0:
+        actor_col[zp.current_enemy] -= 1
+        actor_xpixel[zp.current_enemy] += X_TILEMAX
+    elif actor_xpixel[zp.current_enemy] >= X_TILEMAX:
+        actor_col[zp.current_enemy] += 1
+        actor_xpixel[zp.current_enemy] -= X_TILEMAX
+    elif actor_ypixel[zp.current_enemy] < 0:
+        actor_row[zp.current_enemy] -= 1
+        actor_ypixel[zp.current_enemy] += Y_TILEMAX
+    elif actor_ypixel[zp.current_enemy] >= Y_TILEMAX:
+        actor_row[zp.current_enemy] += 1
+        actor_ypixel[zp.current_enemy] -= Y_TILEMAX
+    s = "#%d: tile=%d,%d pix=%d,%d frac=%d,%d  " % (zp.current_enemy, actor_col[zp.current_enemy], actor_row[zp.current_enemy], actor_xpixel[zp.current_enemy], actor_ypixel[zp.current_enemy], actor_xfrac[zp.current_enemy], actor_yfrac[zp.current_enemy])
     logic_log.debug(s)
     pad.addstr(0 + zp.current_enemy, 40, s)
     if not temp:
@@ -964,38 +964,38 @@ def move_enemy():
 
 def pixel_move(current):
     if current & TILE_UP:
-        enemy_yfrac[zp.current_enemy] -= enemy_yspeed[zp.current_enemy]
-        if enemy_yfrac[zp.current_enemy] < 0:
-            enemy_ypixel[zp.current_enemy] -= 1
-            enemy_yfrac[zp.current_enemy] += 256
+        actor_yfrac[zp.current_enemy] -= actor_yspeed[zp.current_enemy]
+        if actor_yfrac[zp.current_enemy] < 0:
+            actor_ypixel[zp.current_enemy] -= 1
+            actor_yfrac[zp.current_enemy] += 256
     elif current & TILE_DOWN:
-        enemy_yfrac[zp.current_enemy] += enemy_yspeed[zp.current_enemy]
-        if enemy_yfrac[zp.current_enemy] > 255:
-            enemy_ypixel[zp.current_enemy] += 1
-            enemy_yfrac[zp.current_enemy] -= 256
+        actor_yfrac[zp.current_enemy] += actor_yspeed[zp.current_enemy]
+        if actor_yfrac[zp.current_enemy] > 255:
+            actor_ypixel[zp.current_enemy] += 1
+            actor_yfrac[zp.current_enemy] -= 256
     elif current & TILE_LEFT:
-        enemy_xfrac[zp.current_enemy] -= enemy_xspeed[zp.current_enemy]
-        if enemy_xfrac[zp.current_enemy] < 0:
-            enemy_xpixel[zp.current_enemy] -= 1
-            enemy_xfrac[zp.current_enemy] += 256
+        actor_xfrac[zp.current_enemy] -= actor_xspeed[zp.current_enemy]
+        if actor_xfrac[zp.current_enemy] < 0:
+            actor_xpixel[zp.current_enemy] -= 1
+            actor_xfrac[zp.current_enemy] += 256
     elif current & TILE_RIGHT:
-        enemy_xfrac[zp.current_enemy] += enemy_xspeed[zp.current_enemy]
-        if enemy_xfrac[zp.current_enemy] > 255:
-            enemy_xpixel[zp.current_enemy] += 1
-            enemy_xfrac[zp.current_enemy] -= 256
+        actor_xfrac[zp.current_enemy] += actor_xspeed[zp.current_enemy]
+        if actor_xfrac[zp.current_enemy] > 255:
+            actor_xpixel[zp.current_enemy] += 1
+            actor_xfrac[zp.current_enemy] -= 256
 
 def set_speed(current):
     if current & TILE_VERT:
-        enemy_xspeed[zp.current_enemy] = 0
-        enemy_yspeed[zp.current_enemy] = level_speeds[zp.level]
+        actor_xspeed[zp.current_enemy] = 0
+        actor_yspeed[zp.current_enemy] = level_speeds[zp.level]
     else:
-        enemy_xspeed[zp.current_enemy] = level_speeds[zp.level]
-        enemy_yspeed[zp.current_enemy] = 0
+        actor_xspeed[zp.current_enemy] = level_speeds[zp.level]
+        actor_yspeed[zp.current_enemy] = 0
 
 def decide_orbiter():
-    current = enemy_dir[zp.current_enemy]
-    r = enemy_row[zp.current_enemy]
-    c = enemy_col[zp.current_enemy]
+    current = actor_dir[zp.current_enemy]
+    r = actor_row[zp.current_enemy]
+    c = actor_col[zp.current_enemy]
 #    r, c = get_next_tile(r, c, current)
     allowed = get_allowed_dirs(r, c)
 
@@ -1011,16 +1011,16 @@ def decide_orbiter():
             current = allowed & TILE_HORZ
         else:
             current = allowed & TILE_VERT
-        enemy_dir[0] = current
+        actor_dir[0] = current
         set_speed(current)
 
 def decide_direction():
-    current = enemy_dir[zp.current_enemy]
-    r = enemy_row[zp.current_enemy]
-    c = enemy_col[zp.current_enemy]
+    current = actor_dir[zp.current_enemy]
+    r = actor_row[zp.current_enemy]
+    c = actor_col[zp.current_enemy]
 #    r, c = get_next_tile(r, c, current)
     allowed = get_allowed_dirs(r, c)
-    updown = enemy_updown[zp.current_enemy]
+    updown = actor_updown[zp.current_enemy]
 
     allowed_horz = allowed & TILE_HORZ
     allowed_vert = allowed & TILE_VERT
@@ -1045,14 +1045,14 @@ def decide_direction():
                     current = get_target_col(c, allowed_vert)
 
                     if allowed_vert & TILE_UP:
-                        logic_log.debug("enemy %d: at bot T, new dir %x, col=%d target=%d" % (zp.current_enemy, current, c, enemy_target_col[zp.current_enemy]))
+                        logic_log.debug("enemy %d: at bot T, new dir %x, col=%d target=%d" % (zp.current_enemy, current, c, actor_target_col[zp.current_enemy]))
                     else:
-                        logic_log.debug("enemy %d: at top T, new dir %x, col=%d target=%d" % (zp.current_enemy, current, c, enemy_target_col[zp.current_enemy]))
+                        logic_log.debug("enemy %d: at top T, new dir %x, col=%d target=%d" % (zp.current_enemy, current, c, actor_target_col[zp.current_enemy]))
                 else:
                     # approaching horizontally, so check to see if this is the
                     # vpath to use
 
-                    if enemy_target_col[zp.current_enemy] == c:
+                    if actor_target_col[zp.current_enemy] == c:
                         # Going vertical! Reverse desired up/down direction
                         updown = allowed_vert
                         current = allowed_vert
@@ -1065,9 +1065,9 @@ def decide_direction():
                         # skip this vertical, keep on moving
 
                         if allowed_vert & TILE_UP:
-                            logic_log.debug("enemy %d: at bot T, col=%d target=%d; skipping" % (zp.current_enemy, c, enemy_target_col[zp.current_enemy]))
+                            logic_log.debug("enemy %d: at bot T, col=%d target=%d; skipping" % (zp.current_enemy, c, actor_target_col[zp.current_enemy]))
                         else:
-                            logic_log.debug("enemy %d: at top T, col=%d target=%d; skipping" % (zp.current_enemy, c, enemy_target_col[zp.current_enemy]))
+                            logic_log.debug("enemy %d: at top T, col=%d target=%d; skipping" % (zp.current_enemy, c, actor_target_col[zp.current_enemy]))
 
             else:
                 # no up or down available, so keep marching on in the same
@@ -1099,18 +1099,18 @@ def decide_direction():
                     current = get_target_col(c, allowed_vert)
 
                     if allowed_horz & TILE_LEFT:
-                        logic_log.debug("enemy %d: at right corner col=%d, heading left to target=%d" % (zp.current_enemy, c, enemy_target_col[zp.current_enemy]))
+                        logic_log.debug("enemy %d: at right corner col=%d, heading left to target=%d" % (zp.current_enemy, c, actor_target_col[zp.current_enemy]))
                     else:
-                        logic_log.debug("enemy %d: at left corner col=%d, heading right to target=%d" % (zp.current_enemy, c, enemy_target_col[zp.current_enemy]))
+                        logic_log.debug("enemy %d: at left corner col=%d, heading right to target=%d" % (zp.current_enemy, c, actor_target_col[zp.current_enemy]))
                 else:
                     # moving horizontally along the top or bottom. If we get
                     # here, the target column must also be this column
                     current = allowed_vert
                     updown = allowed_vert
                     if allowed_vert & TILE_UP:
-                        logic_log.debug("enemy %d: at bot corner col=%d with target %d, heading up" % (zp.current_enemy, c, enemy_target_col[zp.current_enemy]))
+                        logic_log.debug("enemy %d: at bot corner col=%d with target %d, heading up" % (zp.current_enemy, c, actor_target_col[zp.current_enemy]))
                     else:
-                        logic_log.debug("enemy %d: at top corner col=%d with target=%d, heading down" % (zp.current_enemy, c, enemy_target_col[zp.current_enemy]))
+                        logic_log.debug("enemy %d: at top corner col=%d with target=%d, heading down" % (zp.current_enemy, c, actor_target_col[zp.current_enemy]))
 
     elif allowed_vert:
         # left or right is not available, so we must be in the middle of a
@@ -1122,8 +1122,8 @@ def decide_direction():
         logic_log.debug("enemy %d: illegal move to %d,%d" % (zp.current_enemy, r, c))
         current = 0
 
-    enemy_updown[zp.current_enemy] = updown
-    enemy_dir[zp.current_enemy] = current
+    actor_updown[zp.current_enemy] = updown
+    actor_dir[zp.current_enemy] = current
     set_speed(current)
 
 def move_player():
@@ -1160,7 +1160,7 @@ def check_collisions():
     while zp.current_enemy < zp.num_enemies:
         # Will provide pac-man style bug where they could pass through each
         # other because it's only checking tiles
-        if enemy_row[zp.current_enemy] == r and enemy_col[zp.current_enemy] == c:
+        if actor_row[zp.current_enemy] == r and actor_col[zp.current_enemy] == c:
             start_exploding()
             break
         zp.current_enemy += 1
@@ -1390,7 +1390,7 @@ def get_text_maze(m):
         lines.append(line)
     return lines
 
-enemy_history = [[], [], [], [], [], [], []]
+actor_history = [[], [], [], [], [], [], []]
 player_history = [[], [], [], []]
 
 def print_maze(append=""):
@@ -1403,9 +1403,9 @@ def print_maze(append=""):
     while remain:
         remain = False
         for i in range(zp.num_enemies):
-            if index < len(enemy_history[i]):
+            if index < len(actor_history[i]):
                 remain = True
-                r, c = enemy_history[i][index]
+                r, c = actor_history[i][index]
                 m[r][c] = ord("0") + i
         for i in range(zp.num_players):
             if index < len(player_history[i]):
