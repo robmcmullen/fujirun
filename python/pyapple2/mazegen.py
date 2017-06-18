@@ -206,10 +206,9 @@ def play_game():
     show_screen()
 
     zp.level = 1
-    zp.num_enemies = level_enemies[zp.level]
+    zp.last_enemy = level_enemies[zp.level] + FIRST_AMIDAR
     zp.num_players = 2
-    init_enemies()
-    init_players()
+    init_actors()
     init_static_background()
 
     game_loop()
@@ -219,18 +218,21 @@ def play_game():
 # Zero page
 
 class ZeroPage(object):
+    current_actor = 0  # index of sprite currently being processed
+    current_dir = 0  # direction of actor
     r = 0
     c = 0
+
     round_robin_index = [0, 0]  # down, up
     level = 0
 
+    sprite_addr = None
+
     # enemy info
-    num_enemies = 0
-    current_enemy = 0  # index of enemy being processed
+    last_enemy = 0
 
     # player info
     num_players = 1
-    current_player = 0  # index of player currently being processed
 
     # sprite
     num_sprites_drawn = 0
@@ -298,6 +300,9 @@ else:
         [vpath_cols[0], vpath_cols[2], vpath_cols[4], vpath_cols[5]],
     ]
 
+amidar_start_col = [0] * VPATH_NUM
+round_robin_up = [0] * VPATH_NUM
+round_robin_down = [0] * VPATH_NUM
 
 # up/down/left/right would be 0xf, but this is not legal for ghost legs
 tilechars = [
@@ -394,8 +399,8 @@ def get_rand_byte():
 
 # Get random starting columns for enemies by swapping elements in a list
 # several times
-def get_col_randomizer():
-    r = list(vpath_cols)
+def get_col_randomizer(r):
+    r[:] = vpath_cols[:]
     x = 10
     while x >= 0:
         i1 = get_rand_col()
@@ -404,7 +409,6 @@ def get_col_randomizer():
         r[i1] = r[i2]
         r[i2] = old1
         x -= 1
-    return r
 
 
 ###### Level creation functions
@@ -604,23 +608,23 @@ def check_boxes():
                 # No dots anywhere! Start painting
                 mark_box_for_painting(r1_save, r2, c + 1)
                 num_rows = r2 - r1_save
-                player_score[zp.current_player] += num_rows * 100
+                player_score[zp.current_actor] += num_rows * 100
                 level_boxes[x] = 0  # Set flag so we don't check this box again
 
         x += 3
 
 def mark_box_for_painting(r1, r2, c):
-    box_log.debug("Marking box, player $%d @ %d,%d -> %d,%d" % (zp.current_player, r1, c, r2, c + BOX_WIDTH))
+    box_log.debug("Marking box, player $%d @ %d,%d -> %d,%d" % (zp.current_actor, r1, c, r2, c + BOX_WIDTH))
     x = 0
     while x < NUM_BOX_PAINTING_PARAMS * 16:
         if box_painting[x] == 0:
             box_painting[x] = c
             box_painting[x + 1] = r1
             box_painting[x + 2] = r2
-            box_painting[x + 3] = zp.current_player
+            box_painting[x + 3] = zp.current_actor
             break
         x += NUM_BOX_PAINTING_PARAMS
-    pad.addstr(27, 0, "starting box, player @ %d %d,%d -> %d,%d" % (zp.current_player, r1, c, r2, c + BOX_WIDTH))
+    pad.addstr(27, 0, "starting box, player @ %d %d,%d -> %d,%d" % (zp.current_actor, r1, c, r2, c + BOX_WIDTH))
 
 
 ##### Gameplay storage
@@ -634,54 +638,55 @@ level_enemies = [255, 4, 5, 6, 7, 8]  # level starts counting from 1, so dummy z
 level_speeds = [255, 200, 210, 220, 230, 240]  # increment of fractional pixel per game frame
 player_score_row = [2, 7, 12, 17]
 
-# Hardcoded, up to 8 enemies because there are max of 7 vpaths + 1 orbiter
-# Enemy #0 is the orbiter
-MAX_ENEMIES = 8
+# sprites all use the same table. In the sample configuration, sprites 0 - 3
+# are players, 4 and above are enemies. One is an orbiter enemy, the rest use
+# amidar movement.
+MAX_PLAYERS = 4
+MAX_AMIDARS = VPATH_NUM + 1  # one enemy per vpath + one orbiter
+MAX_ACTORS = MAX_PLAYERS + MAX_AMIDARS
+FIRST_PLAYER = 0
+FIRST_AMIDAR = MAX_PLAYERS
+LAST_PLAYER = FIRST_AMIDAR - 1
+LAST_AMIDAR = MAX_ACTORS - 1
+
+STARTING_LIVES = 3
+BONUS_LIFE = 10000
+MAX_LIVES = 8
+
 X_MIDPOINT = 3
 X_TILEMAX = 7
 Y_MIDPOINT = 3
 Y_TILEMAX = 8
-actor_col = [0, 0, 0, 0, 0, 0, 0, 0]  # current tile column
-actor_xpixel = [0, 0, 0, 0, 0, 0, 0, 0]  # current pixel offset in col
-actor_xfrac = [0, 0, 0, 0, 0, 0, 0, 0]  # current fractional pixel
-actor_xspeed = [0, 0, 0, 0, 0, 0, 0, 0]  # current speed (affects fractional)
-actor_row = [0, 0, 0, 0, 0, 0, 0, 0]  # current tile row
-actor_ypixel = [0, 0, 0, 0, 0, 0, 0, 0]  # current pixel offset in row
-actor_yfrac = [0, 0, 0, 0, 0, 0, 0, 0]  # current fractional pixel
-actor_yspeed = [0, 0, 0, 0, 0, 0, 0, 0]  # current speed (affects fractional)
-actor_updown = [0, 0, 0, 0, 0, 0, 0, 0]  # preferred direction
-actor_dir = [0, 0, 0, 0, 0, 0, 0, 0]  # actual direction
-actor_target_col = [0, 0, 0, 0, 0, 0, 0, 0]  # target column at bot or top T
 
-round_robin_up = [0, 0, 0, 0, 0, 0, 0]
-round_robin_down = [0, 0, 0, 0, 0, 0, 0]
+actor_col = [0] * MAX_ACTORS  # current tile column
+actor_xpixel = [0] * MAX_ACTORS  # current pixel offset in col
+actor_xfrac = [0] * MAX_ACTORS  # current fractional pixel
+actor_xspeed = [0] * MAX_ACTORS  # current speed (affects fractional)
+actor_row = [0] * MAX_ACTORS  # current tile row
+actor_ypixel = [0] * MAX_ACTORS  # current pixel offset in row
+actor_yfrac = [0] * MAX_ACTORS  # current fractional pixel
+actor_yspeed = [0] * MAX_ACTORS  # current speed (affects fractional)
+actor_updown = [0] * MAX_ACTORS  # preferred direction
+actor_dir = [0] * MAX_ACTORS  # actual direction
+actor_target_col = [0] * MAX_ACTORS  # target column at bot or top T
+actor_status = [0] * MAX_ACTORS  # alive, exploding, dead, regenerating, invulnerable, ???
+actor_frame_counter = [0] * MAX_ACTORS  # frame counter for sprite changes
+actor_input_dir = [0] * MAX_ACTORS  # current joystick input direction
 
-# Hardcoded, up to 4 players
-MAX_PLAYERS = 4
-STARTING_LIVES = 3
-BONUS_LIFE = 10000
-MAX_LIVES = 8
-player_col = [0, 0, 0, 0]  # current tile col
-player_xpixel = [0, 0, 0, 0]  # current pixel offset in col
-player_xfrac = [0, 0, 0, 0]  # current fractional pixel
-player_row = [0, 0, 0, 0]  # current tile row
-player_ypixel = [0, 0, 0, 0]  # current pixel offset in row
-player_yfrac = [0, 0, 0, 0]  # current fractional pixel
-player_input_dir = [0, 0, 0, 0]  # current joystick input direction
-player_dir = [0, 0, 0, 0]  # current movement direction
 dot_eaten_row = [255, 255, 255, 255]  # dot eaten by player
 dot_eaten_col = [255, 255, 255, 255]
 player_score = [0, 0, 0, 0]
 player_next_target_score = [0, 0, 0, 0]
 player_lives = [0, 0, 0, 0]  # lives remaining
-player_status = [0, 0, 0, 0]  # alive, exploding, dead, regenerating, ???
-player_frame_counter = [0, 0, 0, 0]  # frame counter for sprite changes
 
-PLAYER_DEAD = 0
-PLAYER_ALIVE = 1
-PLAYER_EXPLODING = 2
-PLAYER_REGENERATING = 3
-GAME_OVER = 4
+NOT_VISIBLE = 0
+PLAYER_DEAD = 1
+PLAYER_ALIVE = 2
+PLAYER_EXPLODING = 3
+PLAYER_REGENERATING = 4
+AMIDAR_NORMAL = 5
+ORBITER_NORMAL = 6
+GAME_OVER = 255
 
 # Scores
 
@@ -690,54 +695,68 @@ PAINT_SCORE_PER_LINE = 100
 
 ##### Gameplay initialization
 
-def init_enemies():
-    zp.current_enemy = 0
-    actor_col[0] = ORBITER_START_COL
-    actor_xpixel[0] = 3
-    actor_xfrac[0] = 0
-    actor_row[0] = ORBITER_START_ROW
-    actor_ypixel[0] = 2
-    actor_yfrac[0] = 0
-    actor_dir[0] = TILE_UP
+def init_actor():
+    # Common initialization params for all actors
+    actor_col[zp.current_actor] = MAZE_LEFT_COL
+    actor_xpixel[zp.current_actor] = 3
+    actor_xfrac[zp.current_actor] = 0
+    actor_xspeed[zp.current_actor] = 0
+    actor_row[zp.current_actor] = MAZE_BOT_ROW
+    actor_ypixel[zp.current_actor] = 3
+    actor_yfrac[zp.current_actor] = 0
+    actor_yspeed[zp.current_actor] = 0
+    actor_input_dir[zp.current_actor] = 0
+    actor_updown[zp.current_actor] = TILE_UP
+    actor_dir[zp.current_actor] = TILE_UP
+    actor_status[zp.current_actor] = NOT_VISIBLE
+    actor_frame_counter[zp.current_actor] = 0
+    actor_target_col[zp.current_actor] = 0
+    actor_input_dir[zp.current_actor] = 0
+
+def init_orbiter():
+    init_actor()
+    actor_col[zp.current_actor] = ORBITER_START_COL
+    actor_row[zp.current_actor] = ORBITER_START_ROW
+    actor_dir[zp.current_actor] = TILE_UP
+    actor_status[zp.current_actor] = ORBITER_NORMAL
     set_speed(TILE_UP)
-    zp.current_enemy = 1
-    randcol = get_col_randomizer()
-    while zp.current_enemy < zp.num_enemies:
-        actor_col[zp.current_enemy] = randcol[zp.current_enemy]
-        actor_xpixel[zp.current_enemy] = 3
-        actor_xfrac[zp.current_enemy] = 0
-        actor_row[zp.current_enemy] = MAZE_TOP_ROW
-        actor_ypixel[zp.current_enemy] = 4
-        actor_yfrac[zp.current_enemy] = 0
-        actor_updown[zp.current_enemy] = TILE_DOWN
-        actor_dir[zp.current_enemy] = TILE_DOWN
-        actor_target_col[zp.current_enemy] = 0  # Arbitrary, just need valid default
-        set_speed(TILE_DOWN)
-        zp.current_enemy += 1
-    round_robin_up[:] = get_col_randomizer()
-    round_robin_down[:] = get_col_randomizer()
-    zp.round_robin_index[:] = [0, 0]
+
+def init_amidar():
+    init_actor()
+    amidar_index = zp.current_actor - FIRST_AMIDAR - 1  # orbiter always 1st enemy
+    actor_col[zp.current_actor] = amidar_start_col[amidar_index]
+    actor_row[zp.current_actor] = MAZE_TOP_ROW
+    actor_ypixel[zp.current_actor] = 4
+    actor_updown[zp.current_actor] = TILE_DOWN
+    actor_dir[zp.current_actor] = TILE_DOWN
+    actor_status[zp.current_actor] = AMIDAR_NORMAL
+    set_speed(TILE_DOWN)
 
 def init_player():
+    init_actor()
     addr = player_start_col[zp.num_players]
-    player_col[zp.current_player] = addr[zp.current_player]
-    player_xpixel[zp.current_player] = 3
-    player_xfrac[zp.current_player] = 0
-    player_row[zp.current_player] = MAZE_BOT_ROW
-    player_ypixel[zp.current_player] = 3
-    player_yfrac[zp.current_player] = 0
-    player_input_dir[zp.current_player] = 0
-    player_dir[zp.current_player] = 0
-    player_status[zp.current_player] = PLAYER_ALIVE
-    player_frame_counter[zp.current_player] = 0
+    actor_col[zp.current_actor] = addr[zp.current_actor]
+    actor_row[zp.current_actor] = MAZE_BOT_ROW
+    actor_status[zp.current_actor] = PLAYER_ALIVE
 
-def init_players():
-    zp.current_player = 0
-    while zp.current_player < zp.num_players:
-        init_player()
-        player_lives[zp.current_player] = STARTING_LIVES
-        player_next_target_score[zp.current_player] = BONUS_LIFE
-        zp.current_player += 1
+def init_actors():
+    get_col_randomizer(amidar_start_col)
+    get_col_randomizer(round_robin_up)
+    get_col_randomizer(round_robin_down)
+    zp.current_actor = 0
+    while zp.current_actor <= zp.last_enemy:
+        if zp.current_actor <= LAST_PLAYER:
+            if zp.current_actor < zp.num_players:
+                init_player()
+                player_lives[zp.current_actor] = STARTING_LIVES
+                player_next_target_score[zp.current_actor] = BONUS_LIFE
+        else:
+            if zp.current_actor == FIRST_AMIDAR:
+                init_orbiter()
+            else:
+                init_amidar()
+        zp.current_actor += 1
+    zp.round_robin_index[:] = [0, 0]
 
 
 ##### Drawing routines
@@ -778,84 +797,70 @@ def erase_sprites():
         draw_log.debug("restoring background %d @ (%d,%d)" % (i, r, c))
         addr[c] = val
 
-def save_backing_store(r, c, sprite):
+def save_backing_store(r, c):
     addr = mazerow(r)
     i = zp.num_sprites_drawn
     draw_log.debug("saving background %d @ (%d,%d)" % (i, r, c))
     last_sprite_byte[i] = c
     last_sprite_y[i] = r
-    last_sprite_addr[i] = sprite
+    last_sprite_addr[i] = zp.sprite_addr
     sprite_backing_store[i] = addr[c]
     sprite_bytes_per_row[i] = 1
     sprite_num_rows[i] = 1
     zp.num_sprites_drawn += 1
 
-def draw_sprite(r, c, sprite):
-    if sprite is not None:
-        save_backing_store(r, c, sprite)
+def draw_sprite(r, c):
+    if zp.sprite_addr is not None:
+        save_backing_store(r, c)
         addr = screenrow(r)
-        addr[c] = sprite
+        addr[c] = zp.sprite_addr
 
-def draw_enemies():
-    zp.current_enemy = 0
-    while zp.current_enemy < zp.num_enemies:
-        r = actor_row[zp.current_enemy]
-        c = actor_col[zp.current_enemy]
-        sprite = get_enemy_sprite()
-        draw_sprite(r, c, sprite)
+def draw_actors():
+    zp.current_actor = 0
+    while zp.current_actor <= zp.last_enemy:
+        r = actor_row[zp.current_actor]
+        c = actor_col[zp.current_actor]
+        get_sprite()
+        draw_sprite(r, c)
+        zp.current_actor += 1
 
-        #actor_history[i].append((r, c))
-        zp.current_enemy += 1
-
-def draw_players():
-    zp.current_player = 0
-    while zp.current_player < zp.num_players:
-        r = player_row[zp.current_player]
-        c = player_col[zp.current_player]
-        sprite = get_player_sprite()
-        draw_sprite(r, c, sprite)
-
-        #player_history[zp.current_player].append((r, c))
-        zp.current_player += 1
-
-def get_enemy_sprite():
-    return ord("0") + zp.current_enemy
-
-def get_player_sprite():
-    a = player_status[zp.current_player]
+def get_sprite():
+    a = actor_status[zp.current_actor]
     if a == PLAYER_ALIVE:
-        c = ord("$") + zp.current_player
+        c = ord("$") + zp.current_actor
     elif a == PLAYER_EXPLODING:
-        collision_log.debug("p%d: exploding, frame=%d" % (zp.current_player, player_frame_counter[zp.current_player]))
-        c = ord(exploding_char[player_frame_counter[zp.current_player]])
-        player_frame_counter[zp.current_player] -= 1
-        if player_frame_counter[zp.current_player] <= 0:
-            player_status[zp.current_player] = PLAYER_DEAD
-            player_frame_counter[zp.current_player] = DEAD_TIME
+        collision_log.debug("p%d: exploding, frame=%d" % (zp.current_actor, actor_frame_counter[zp.current_actor]))
+        c = ord(exploding_char[actor_frame_counter[zp.current_actor]])
+        actor_frame_counter[zp.current_actor] -= 1
+        if actor_frame_counter[zp.current_actor] <= 0:
+            actor_status[zp.current_actor] = PLAYER_DEAD
+            actor_frame_counter[zp.current_actor] = DEAD_TIME
     elif a == PLAYER_DEAD:
-        collision_log.debug("p%d: dead, waiting=%d" % (zp.current_player, player_frame_counter[zp.current_player]))
+        collision_log.debug("p%d: dead, waiting=%d" % (zp.current_actor, actor_frame_counter[zp.current_actor]))
         c = None
-        player_frame_counter[zp.current_player] -= 1
-        if player_frame_counter[zp.current_player] <= 0:
-            player_lives[zp.current_player] -= 1
-            if player_lives[zp.current_player] > 0:
+        actor_frame_counter[zp.current_actor] -= 1
+        if actor_frame_counter[zp.current_actor] <= 0:
+            player_lives[zp.current_actor] -= 1
+            if player_lives[zp.current_actor] > 0:
                 init_player()
-                player_status[zp.current_player] = PLAYER_REGENERATING
-                player_frame_counter[zp.current_player] = REGENERATING_TIME
+                actor_status[zp.current_actor] = PLAYER_REGENERATING
+                actor_frame_counter[zp.current_actor] = REGENERATING_TIME
             else:
-                player_status[zp.current_player] = GAME_OVER
+                actor_status[zp.current_actor] = GAME_OVER
     elif a == PLAYER_REGENERATING:
-        collision_log.debug("p%d: regenerating, frame=%d" % (zp.current_player, player_frame_counter[zp.current_player]))
-        if player_frame_counter[zp.current_player] & 1:
-            c = ord("$") + zp.current_player
+        collision_log.debug("p%d: regenerating, frame=%d" % (zp.current_actor, actor_frame_counter[zp.current_actor]))
+        if actor_frame_counter[zp.current_actor] & 1:
+            c = ord("$") + zp.current_actor
         else:
             c = ord(" ")
-        player_frame_counter[zp.current_player] -= 1
-        if player_frame_counter[zp.current_player] <= 0:
-            player_status[zp.current_player] = PLAYER_ALIVE
+        actor_frame_counter[zp.current_actor] -= 1
+        if actor_frame_counter[zp.current_actor] <= 0:
+            actor_status[zp.current_actor] = PLAYER_ALIVE
+    elif a == AMIDAR_NORMAL or a == ORBITER_NORMAL:
+        c = ord("0") + zp.current_actor - FIRST_AMIDAR
     else:
         c = None
-    return c
+    zp.sprite_addr = c
 
 
 ##### Game logic
@@ -917,92 +922,91 @@ def get_target_col(c, allowed_vert):
         current = TILE_LEFT
     else:
         current = TILE_RIGHT
-    actor_target_col[zp.current_enemy] = target_col
+    actor_target_col[zp.current_actor] = target_col
     return current
 
 def check_midpoint(current):
     # set up decision point flag to see if we have crossed the midpoint
     # after the movement
     if current & TILE_VERT:
-        sub = actor_ypixel[zp.current_enemy]
+        sub = actor_ypixel[zp.current_actor]
         return sub == Y_MIDPOINT
     else:
-        sub = actor_xpixel[zp.current_enemy]
+        sub = actor_xpixel[zp.current_actor]
         return sub == X_MIDPOINT
 
 # Move enemy given the enemy index
 def move_enemy():
-    current = actor_dir[zp.current_enemy]
+    current = actor_dir[zp.current_actor]
 
     # check sub-pixel location to see if we've reached a decision point
     temp = check_midpoint(current)
     pixel_move(current)
     # check if moved to next tile. pixel fraction stays the same to keep
     # the speed consistent, only the pixel gets adjusted
-    if actor_xpixel[zp.current_enemy] < 0:
-        actor_col[zp.current_enemy] -= 1
-        actor_xpixel[zp.current_enemy] += X_TILEMAX
-    elif actor_xpixel[zp.current_enemy] >= X_TILEMAX:
-        actor_col[zp.current_enemy] += 1
-        actor_xpixel[zp.current_enemy] -= X_TILEMAX
-    elif actor_ypixel[zp.current_enemy] < 0:
-        actor_row[zp.current_enemy] -= 1
-        actor_ypixel[zp.current_enemy] += Y_TILEMAX
-    elif actor_ypixel[zp.current_enemy] >= Y_TILEMAX:
-        actor_row[zp.current_enemy] += 1
-        actor_ypixel[zp.current_enemy] -= Y_TILEMAX
-    s = "#%d: tile=%d,%d pix=%d,%d frac=%d,%d  " % (zp.current_enemy, actor_col[zp.current_enemy], actor_row[zp.current_enemy], actor_xpixel[zp.current_enemy], actor_ypixel[zp.current_enemy], actor_xfrac[zp.current_enemy], actor_yfrac[zp.current_enemy])
+    if actor_xpixel[zp.current_actor] < 0:
+        actor_col[zp.current_actor] -= 1
+        actor_xpixel[zp.current_actor] += X_TILEMAX
+    elif actor_xpixel[zp.current_actor] >= X_TILEMAX:
+        actor_col[zp.current_actor] += 1
+        actor_xpixel[zp.current_actor] -= X_TILEMAX
+    elif actor_ypixel[zp.current_actor] < 0:
+        actor_row[zp.current_actor] -= 1
+        actor_ypixel[zp.current_actor] += Y_TILEMAX
+    elif actor_ypixel[zp.current_actor] >= Y_TILEMAX:
+        actor_row[zp.current_actor] += 1
+        actor_ypixel[zp.current_actor] -= Y_TILEMAX
+    s = "#%d: tile=%d,%d pix=%d,%d frac=%d,%d  " % (zp.current_actor, actor_col[zp.current_actor], actor_row[zp.current_actor], actor_xpixel[zp.current_actor], actor_ypixel[zp.current_actor], actor_xfrac[zp.current_actor], actor_yfrac[zp.current_actor])
     logic_log.debug(s)
-    pad.addstr(0 + zp.current_enemy, 40, s)
+    pad.addstr(0 + zp.current_actor, 40, s)
     if not temp:
         if check_midpoint(current):
             # crossed the midpoint! Make a decision on the next allowed direction
-            if zp.current_enemy == 0:
+            if actor_status[zp.current_actor] == ORBITER_NORMAL:
                 decide_orbiter()
             else:
                 decide_direction()
 
 def pixel_move(current):
     if current & TILE_UP:
-        actor_yfrac[zp.current_enemy] -= actor_yspeed[zp.current_enemy]
-        if actor_yfrac[zp.current_enemy] < 0:
-            actor_ypixel[zp.current_enemy] -= 1
-            actor_yfrac[zp.current_enemy] += 256
+        actor_yfrac[zp.current_actor] -= actor_yspeed[zp.current_actor]
+        if actor_yfrac[zp.current_actor] < 0:
+            actor_ypixel[zp.current_actor] -= 1
+            actor_yfrac[zp.current_actor] += 256
     elif current & TILE_DOWN:
-        actor_yfrac[zp.current_enemy] += actor_yspeed[zp.current_enemy]
-        if actor_yfrac[zp.current_enemy] > 255:
-            actor_ypixel[zp.current_enemy] += 1
-            actor_yfrac[zp.current_enemy] -= 256
+        actor_yfrac[zp.current_actor] += actor_yspeed[zp.current_actor]
+        if actor_yfrac[zp.current_actor] > 255:
+            actor_ypixel[zp.current_actor] += 1
+            actor_yfrac[zp.current_actor] -= 256
     elif current & TILE_LEFT:
-        actor_xfrac[zp.current_enemy] -= actor_xspeed[zp.current_enemy]
-        if actor_xfrac[zp.current_enemy] < 0:
-            actor_xpixel[zp.current_enemy] -= 1
-            actor_xfrac[zp.current_enemy] += 256
+        actor_xfrac[zp.current_actor] -= actor_xspeed[zp.current_actor]
+        if actor_xfrac[zp.current_actor] < 0:
+            actor_xpixel[zp.current_actor] -= 1
+            actor_xfrac[zp.current_actor] += 256
     elif current & TILE_RIGHT:
-        actor_xfrac[zp.current_enemy] += actor_xspeed[zp.current_enemy]
-        if actor_xfrac[zp.current_enemy] > 255:
-            actor_xpixel[zp.current_enemy] += 1
-            actor_xfrac[zp.current_enemy] -= 256
+        actor_xfrac[zp.current_actor] += actor_xspeed[zp.current_actor]
+        if actor_xfrac[zp.current_actor] > 255:
+            actor_xpixel[zp.current_actor] += 1
+            actor_xfrac[zp.current_actor] -= 256
 
 def set_speed(current):
     if current & TILE_VERT:
-        actor_xspeed[zp.current_enemy] = 0
-        actor_yspeed[zp.current_enemy] = level_speeds[zp.level]
+        actor_xspeed[zp.current_actor] = 0
+        actor_yspeed[zp.current_actor] = level_speeds[zp.level]
     else:
-        actor_xspeed[zp.current_enemy] = level_speeds[zp.level]
-        actor_yspeed[zp.current_enemy] = 0
+        actor_xspeed[zp.current_actor] = level_speeds[zp.level]
+        actor_yspeed[zp.current_actor] = 0
 
 def decide_orbiter():
-    current = actor_dir[zp.current_enemy]
-    r = actor_row[zp.current_enemy]
-    c = actor_col[zp.current_enemy]
-#    r, c = get_next_tile(r, c, current)
+    current = actor_dir[zp.current_actor]
+    r = actor_row[zp.current_actor]
+    c = actor_col[zp.current_actor]
     allowed = get_allowed_dirs(r, c)
 
     if allowed & current:
         # Can continue the current direction, so keep on doing it
 
-        logic_log.debug("orbiter: continuing %s" % str_dirs(current))
+        logic_log.debug("orbiter %d: continuing %s" % (zp.current_actor, str_dirs(current)))
     else:
         # Can't continue, and because we must be at a corner, turn 90 degrees.
         # So, if we are moving vertically, go horizontally, and vice versa.
@@ -1011,16 +1015,15 @@ def decide_orbiter():
             current = allowed & TILE_HORZ
         else:
             current = allowed & TILE_VERT
-        actor_dir[0] = current
+        actor_dir[zp.current_actor] = current
         set_speed(current)
 
 def decide_direction():
-    current = actor_dir[zp.current_enemy]
-    r = actor_row[zp.current_enemy]
-    c = actor_col[zp.current_enemy]
-#    r, c = get_next_tile(r, c, current)
+    current = actor_dir[zp.current_actor]
+    r = actor_row[zp.current_actor]
+    c = actor_col[zp.current_actor]
     allowed = get_allowed_dirs(r, c)
-    updown = actor_updown[zp.current_enemy]
+    updown = actor_updown[zp.current_actor]
 
     allowed_horz = allowed & TILE_HORZ
     allowed_vert = allowed & TILE_VERT
@@ -1045,34 +1048,34 @@ def decide_direction():
                     current = get_target_col(c, allowed_vert)
 
                     if allowed_vert & TILE_UP:
-                        logic_log.debug("enemy %d: at bot T, new dir %x, col=%d target=%d" % (zp.current_enemy, current, c, actor_target_col[zp.current_enemy]))
+                        logic_log.debug("enemy %d: at bot T, new dir %x, col=%d target=%d" % (zp.current_actor, current, c, actor_target_col[zp.current_actor]))
                     else:
-                        logic_log.debug("enemy %d: at top T, new dir %x, col=%d target=%d" % (zp.current_enemy, current, c, actor_target_col[zp.current_enemy]))
+                        logic_log.debug("enemy %d: at top T, new dir %x, col=%d target=%d" % (zp.current_actor, current, c, actor_target_col[zp.current_actor]))
                 else:
                     # approaching horizontally, so check to see if this is the
                     # vpath to use
 
-                    if actor_target_col[zp.current_enemy] == c:
+                    if actor_target_col[zp.current_actor] == c:
                         # Going vertical! Reverse desired up/down direction
                         updown = allowed_vert
                         current = allowed_vert
 
                         if allowed_vert & TILE_UP:
-                            logic_log.debug("enemy %d: at bot T, reached target=%d, going up" % (zp.current_enemy, c))
+                            logic_log.debug("enemy %d: at bot T, reached target=%d, going up" % (zp.current_actor, c))
                         else:
-                            logic_log.debug("enemy %d: at top T, reached target=%d, going down" % (zp.current_enemy, c))
+                            logic_log.debug("enemy %d: at top T, reached target=%d, going down" % (zp.current_actor, c))
                     else:
                         # skip this vertical, keep on moving
 
                         if allowed_vert & TILE_UP:
-                            logic_log.debug("enemy %d: at bot T, col=%d target=%d; skipping" % (zp.current_enemy, c, actor_target_col[zp.current_enemy]))
+                            logic_log.debug("enemy %d: at bot T, col=%d target=%d; skipping" % (zp.current_actor, c, actor_target_col[zp.current_actor]))
                         else:
-                            logic_log.debug("enemy %d: at top T, col=%d target=%d; skipping" % (zp.current_enemy, c, actor_target_col[zp.current_enemy]))
+                            logic_log.debug("enemy %d: at top T, col=%d target=%d; skipping" % (zp.current_actor, c, actor_target_col[zp.current_actor]))
 
             else:
                 # no up or down available, so keep marching on in the same
                 # direction.
-                logic_log.debug("enemy %d: no up/down, keep moving %s" % (zp.current_enemy, str_dirs(current)))
+                logic_log.debug("enemy %d: no up/down, keep moving %s" % (zp.current_actor, str_dirs(current)))
 
         else:
             # only one horizontal dir is available
@@ -1083,12 +1086,12 @@ def decide_direction():
                 if current & TILE_VERT:
                     # moving vertically. Have to take the horizontal path
                     current = allowed_horz
-                    logic_log.debug("enemy %d: taking hpath, start moving %s" % (zp.current_enemy, str_dirs(current)))
+                    logic_log.debug("enemy %d: taking hpath, start moving %s" % (zp.current_actor, str_dirs(current)))
                 else:
                     # moving horizontally into the T, forcing a vertical turn.
                     # Go back to preferred up/down direction
                     current = updown
-                    logic_log.debug("enemy %d: hpath end, start moving %s" % (zp.current_enemy, str_dirs(current)))
+                    logic_log.debug("enemy %d: hpath end, start moving %s" % (zp.current_actor, str_dirs(current)))
             else:
                 # At a corner, because this tile has exactly one vertical and
                 # one horizontal path.
@@ -1099,109 +1102,109 @@ def decide_direction():
                     current = get_target_col(c, allowed_vert)
 
                     if allowed_horz & TILE_LEFT:
-                        logic_log.debug("enemy %d: at right corner col=%d, heading left to target=%d" % (zp.current_enemy, c, actor_target_col[zp.current_enemy]))
+                        logic_log.debug("enemy %d: at right corner col=%d, heading left to target=%d" % (zp.current_actor, c, actor_target_col[zp.current_actor]))
                     else:
-                        logic_log.debug("enemy %d: at left corner col=%d, heading right to target=%d" % (zp.current_enemy, c, actor_target_col[zp.current_enemy]))
+                        logic_log.debug("enemy %d: at left corner col=%d, heading right to target=%d" % (zp.current_actor, c, actor_target_col[zp.current_actor]))
                 else:
                     # moving horizontally along the top or bottom. If we get
                     # here, the target column must also be this column
                     current = allowed_vert
                     updown = allowed_vert
                     if allowed_vert & TILE_UP:
-                        logic_log.debug("enemy %d: at bot corner col=%d with target %d, heading up" % (zp.current_enemy, c, actor_target_col[zp.current_enemy]))
+                        logic_log.debug("enemy %d: at bot corner col=%d with target %d, heading up" % (zp.current_actor, c, actor_target_col[zp.current_actor]))
                     else:
-                        logic_log.debug("enemy %d: at top corner col=%d with target=%d, heading down" % (zp.current_enemy, c, actor_target_col[zp.current_enemy]))
+                        logic_log.debug("enemy %d: at top corner col=%d with target=%d, heading down" % (zp.current_actor, c, actor_target_col[zp.current_actor]))
 
     elif allowed_vert:
         # left or right is not available, so we must be in the middle of a
         # vpath segment. Only thing to do is keep moving
-        logic_log.debug("enemy %d: keep moving %x" % (zp.current_enemy, current))
+        logic_log.debug("enemy %d: keep moving %x" % (zp.current_actor, current))
 
     else:
         # only get here when moving into an illegal space
-        logic_log.debug("enemy %d: illegal move to %d,%d" % (zp.current_enemy, r, c))
+        logic_log.debug("enemy %d: illegal move to %d,%d" % (zp.current_actor, r, c))
         current = 0
 
-    actor_updown[zp.current_enemy] = updown
-    actor_dir[zp.current_enemy] = current
+    actor_updown[zp.current_actor] = updown
+    actor_dir[zp.current_actor] = current
     set_speed(current)
 
 def move_player():
-    r = player_row[zp.current_player]
-    c = player_col[zp.current_player]
+    r = actor_row[zp.current_actor]
+    c = actor_col[zp.current_actor]
     allowed = get_allowed_dirs(r, c)
-    current = player_dir[zp.current_player]
-    d = player_input_dir[zp.current_player]
+    current = actor_dir[zp.current_actor]
+    d = actor_input_dir[zp.current_actor]
     pad.addstr(26, 0, "r=%d c=%d allowed=%s d=%s current=%s      " % (r, c, str_dirs(allowed), str_dirs(d), str_dirs(current)))
     if d:
         if allowed & d:
             # player wants to go in an allowed direction, so go!
-            player_dir[zp.current_player] = d
+            actor_dir[zp.current_actor] = d
             r, c = get_next_tile(r, c, d)
-            player_row[zp.current_player] = r
-            player_col[zp.current_player] = c
+            actor_row[zp.current_actor] = r
+            actor_col[zp.current_actor] = c
         else:
             # player wants to go in an illegal direction. instead, continue in
             # direction that was last requested
 
             if allowed & current:
                 r, c = get_next_tile(r, c, current)
-                player_row[zp.current_player] = r
-                player_col[zp.current_player] = c
+                actor_row[zp.current_actor] = r
+                actor_col[zp.current_actor] = c
 
 
 ##### Collision detection
 
 # Check possible collisions between the current player and any enemies
 def check_collisions():
-    zp.current_enemy = 0
-    r = player_row[zp.current_player]
-    c = player_col[zp.current_player]
-    while zp.current_enemy < zp.num_enemies:
+    r = actor_row[zp.current_actor]
+    c = actor_col[zp.current_actor]
+    enemy_index = FIRST_AMIDAR
+    while enemy_index <= zp.last_enemy:
         # Will provide pac-man style bug where they could pass through each
         # other because it's only checking tiles
-        if actor_row[zp.current_enemy] == r and actor_col[zp.current_enemy] == c:
+        if actor_row[enemy_index] == r and actor_col[enemy_index] == c:
             start_exploding()
             break
-        zp.current_enemy += 1
+        enemy_index += 1
 
 def start_exploding():
-    player_status[zp.current_player] = PLAYER_EXPLODING
-    player_frame_counter[zp.current_player] = EXPLODING_TIME
+    actor_status[zp.current_actor] = PLAYER_EXPLODING
+    actor_frame_counter[zp.current_actor] = EXPLODING_TIME
 
 
 ##### Scoring routines
 
 def check_dots():
-    r = player_row[zp.current_player]
-    c = player_col[zp.current_player]
+    r = actor_row[zp.current_actor]
+    c = actor_col[zp.current_actor]
     if has_dot(r, c):
-        dot_eaten_row[zp.current_player] = r
-        dot_eaten_col[zp.current_player] = c
+        dot_eaten_row[zp.current_actor] = r
+        dot_eaten_col[zp.current_actor] = c
 
         # Update maze here so we can check which player closed off a box
         addr = mazerow(r)
         addr[c] &= ~TILE_DOT
 
-        player_score[zp.current_player] += DOT_SCORE
+        player_score[zp.current_actor] += DOT_SCORE
 
 def update_background():
-    zp.current_player = 0
-    while zp.current_player < zp.num_players:
-        if dot_eaten_col[zp.current_player] < 128:
+    zp.current_actor = 0
+    while zp.current_actor < zp.num_players:
+        if dot_eaten_col[zp.current_actor] < 128:
             # Here we update the screen; note the maze has already been updated
             # but we don't change the background until now so sprites can
             # restore their saved backgrounds first.
 
-            r = dot_eaten_row[zp.current_player]
-            c = dot_eaten_col[zp.current_player]
+            r = dot_eaten_row[zp.current_actor]
+            c = dot_eaten_col[zp.current_actor]
             addr = screenrow(r)
             addr[c] &= ~TILE_DOT
 
             # mark as completed
-            dot_eaten_col[zp.current_player] = 255
+            dot_eaten_col[zp.current_actor] = 255
         update_score()
-        zp.current_player += 1
+        zp.current_actor += 1
 
     paint_boxes()
 
@@ -1231,12 +1234,12 @@ def paint_boxes():
         x += NUM_BOX_PAINTING_PARAMS
 
 def init_static_background():
-    zp.current_player = 0
-    while zp.current_player < zp.num_players:
-        row = player_score_row[zp.current_player]
+    zp.current_actor = 0
+    while zp.current_actor < zp.num_players:
+        row = player_score_row[zp.current_actor]
         pad.addstr(row - 1, MAZE_SCORE_COL, "       ")
-        pad.addstr(row, MAZE_SCORE_COL,     "Player%d" % (zp.current_player + 1))
-        zp.current_player += 1
+        pad.addstr(row, MAZE_SCORE_COL,     "Player%d" % (zp.current_actor + 1))
+        zp.current_actor += 1
 
 def show_lives(row, num):
     i = 1
@@ -1251,13 +1254,13 @@ def show_lives(row, num):
         i += 1
 
 def update_score():
-    row = player_score_row[zp.current_player]
-    if player_status[zp.current_player] == GAME_OVER:
+    row = player_score_row[zp.current_actor]
+    if actor_status[zp.current_actor] == GAME_OVER:
         pad.addstr(row - 1, MAZE_SCORE_COL, "GAME   ")
         pad.addstr(row, MAZE_SCORE_COL,     "   OVER")
     else:
-        pad.addstr(row + 1, MAZE_SCORE_COL, " %06d" % player_score[zp.current_player])
-        show_lives(row + 2, player_lives[zp.current_player])
+        pad.addstr(row + 1, MAZE_SCORE_COL, " %06d" % player_score[zp.current_actor])
+        show_lives(row + 2, player_lives[zp.current_actor])
 
 
 ##### User input routines
@@ -1281,26 +1284,26 @@ def read_curses():
         config_quit = 1
 
     if key == curses.KEY_UP:
-        player_input_dir[0] = TILE_UP
+        actor_input_dir[0] = TILE_UP
     elif key == curses.KEY_DOWN:
-        player_input_dir[0] = TILE_DOWN
+        actor_input_dir[0] = TILE_DOWN
     elif key == curses.KEY_LEFT:
-        player_input_dir[0] = TILE_LEFT
+        actor_input_dir[0] = TILE_LEFT
     elif key == curses.KEY_RIGHT:
-        player_input_dir[0] = TILE_RIGHT
+        actor_input_dir[0] = TILE_RIGHT
     else:
-        player_input_dir[0] = 0
+        actor_input_dir[0] = 0
 
     if key == ord(',') or key == ord('.'):
-        player_input_dir[1] = TILE_UP
+        actor_input_dir[1] = TILE_UP
     elif key == ord('o'):
-        player_input_dir[1] = TILE_DOWN
+        actor_input_dir[1] = TILE_DOWN
     elif key == ord('a'):
-        player_input_dir[1] = TILE_LEFT
+        actor_input_dir[1] = TILE_LEFT
     elif key == ord('e'):
-        player_input_dir[1] = TILE_RIGHT
+        actor_input_dir[1] = TILE_RIGHT
     else:
-        player_input_dir[1] = 0
+        actor_input_dir[1] = 0
 
     if key == ord('1'):
         config_start = 1
@@ -1322,29 +1325,29 @@ def game_loop():
             return
         game_log.debug(chr(12))
 
-        zp.current_enemy = 0
-        while zp.current_enemy < zp.num_enemies:
+        zp.current_actor = FIRST_AMIDAR
+        while zp.current_actor <= zp.last_enemy:
             move_enemy()
-            zp.current_enemy += 1
+            zp.current_actor += 1
 
-        zp.current_player = 0
+        zp.current_actor = 0
         still_alive = 0
-        while zp.current_player < zp.num_players:
-            if player_status[zp.current_player] == PLAYER_REGENERATING:
+        while zp.current_actor < zp.num_players:
+            if actor_status[zp.current_actor] == PLAYER_REGENERATING:
                 # If regenerating, change to alive if the player starts to move
-                if player_input_dir[zp.current_player] > 0:
-                    player_status[zp.current_player] = PLAYER_ALIVE
-            if player_status[zp.current_player] == PLAYER_ALIVE:
+                if actor_input_dir[zp.current_actor] > 0:
+                    actor_status[zp.current_actor] = PLAYER_ALIVE
+            if actor_status[zp.current_actor] == PLAYER_ALIVE:
                 # only move and check collisions if alive
                 move_player()
                 check_collisions()
-            if player_status[zp.current_player] == PLAYER_ALIVE:
+            if actor_status[zp.current_actor] == PLAYER_ALIVE:
                 # only check for points if still alive
                 check_dots()
                 check_boxes()
-            if player_status[zp.current_player] != GAME_OVER:
+            if actor_status[zp.current_actor] != GAME_OVER:
                 still_alive += 1
-            zp.current_player += 1
+            zp.current_actor += 1
 
         if still_alive == 0:
             countdown_time -= 1
@@ -1353,8 +1356,7 @@ def game_loop():
 
         erase_sprites()
         update_background()
-        draw_enemies()
-        draw_players()
+        draw_actors()
         show_screen()
         time.sleep(.01)
         if count % 50 == 0:
