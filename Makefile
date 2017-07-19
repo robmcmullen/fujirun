@@ -32,7 +32,10 @@ partycrasher-software.hgr: partycrasher-software.png
 titles.dsk: cpbg.xex player-missile.hgr partycrasher-software.hgr kansasfest-hackfest.hgr
 	atrcopy titles.dsk boot -d kansasfest-hackfest.hgr@2000 player-missile.hgr@4000 partycrasher-software.hgr@2000 -b cpbg.xex --brun 6000 -f
 
-working.xex: working.s rand.s
+working-sprite-driver.s: $(BWSPRITE)
+	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o working $(BWSPRITE)
+
+working.xex: working.s rand.s maze.s working-sprite-driver.s
 	rm -f working.xex
 	atasm -mae -oworking.xex working.s -Lworking.var -gworking.lst
 
@@ -45,4 +48,4 @@ clean:
 	rm -f titles.dsk
 	rm -f player-missile.hgr player-missile.hgr.png partycrasher-software.hgr kansasfest-hackfest.hgr
 	rm -f tmphgr-*
-	rm -f working.dsk working.xex
+	rm -f working.dsk working.xex working-*.s

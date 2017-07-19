@@ -1,8 +1,6 @@
 
 ; defines
 
-VPATH_NUM = 6
-
 rand_test ldx #0
 ?1  jsr get_rand_byte
     sta $2000,x
