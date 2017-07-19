@@ -38,10 +38,6 @@ player_start_col .byte 255,255,255,255, ; zero players!
     .byte 7, 19, 31, 0,
     .byte 1, 13, 25, 31,
 
-amidar_start_col .ds VPATH_NUM
-round_robin_up  .ds VPATH_NUM
-round_robin_down  .ds VPATH_NUM
-
 MAZE_TOP_ROW = 1
 MAZE_BOT_ROW = 22
 SCREEN_ROWS = 24
@@ -83,11 +79,13 @@ mazerow lda textrows_l,y
 ;        y += 1
 ;    init_boxes()
 clear_maze nop
-    ldx #MAZE_RIGHT_COL
+    ldx #MAZE_LEFT_COL
     lda #0
 ?1  jsr text_put_col
-    dex
-    bpl ?1
+    inx
+    cpx #MAZE_RIGHT_COL
+    bcc ?1
+    beq ?1
     jmp init_boxes
 
 ;# Set all elements in a row to dot + left + right; only top and bottom
@@ -100,8 +98,8 @@ clear_maze nop
 
 ; row in Y, clobbered
 setrow jsr mazerow
-    ldy #MAZE_RIGHT_COL
     lda #MIDDLE_TILE
+    ldy #MAZE_RIGHT_COL
 ?1  sta (mazeaddr),y
     dey
     cpy #MAZE_LEFT_COL
@@ -166,34 +164,116 @@ setvpath lda vpath_cols,x
 ;# hpath vertical positioning leaves 2 empty rows, so moving up by one still
 ;# leaves 1 empty row.
 ;def sethpath(col):
+x1_save .byte 0
+x2 .byte 0
+col_save .byte 0
+row_save .byte 0
+
+; X is col, clobbers everything
+sethpath PUSHAXY
+    stx col_save
+
 ;    x1_save = vpath_cols[col - 1]
+    dex
+    lda vpath_cols,x
+    sta x1_save
+
 ;    x2 = vpath_cols[col]
+    inx
+    lda vpath_cols,x
+    sta x2
+
 ;    y = MAZE_TOP_ROW
+    ldy #MAZE_TOP_ROW
+    sty row_save
+
 ;    start_box(y, x1_save)
+    ldx x1_save
+    jsr start_box
+
 ;    y += get_rand_spacing()
+    jsr get_rand_spacing
+    sta scratch_row
+    tya
+    clc
+    adc scratch_row
+    tay
+    sty row_save
+
 ;    while y < MAZE_BOT_ROW - 1:
 ;        addr = mazerow(y)
-;
+?1  ldy row_save
+    jsr mazerow
+
 ;        # If not working on the rightmost column, check to see there are
 ;        # no cross-throughs.
 ;        if col < VPATH_NUM - 1:
+    lda col_save
+    cmp #VPATH_NUM-1
+    bcs ?hpath_ok
+
 ;            tile = addr[x2]
+    ldy x2
+    lda (mazeaddr),y
+
 ;            if tile & TILE_RIGHT:
+    and #TILE_RIGHT
+    beq ?hpath_ok
+
 ;                maze_log.debug("at y=%d on col %d, found same hpath level at col %d" % (y, col, col + 1))
 ;                y -= 1
+    dec row_save
 ;                addr = mazerow(y)
+    ldy row_save
+    jsr mazerow
+
+?hpath_ok
 ;        add_box(y)
+    ldy row_save
+    jsr add_box
+
 ;
 ;        x = x1_save
+    ldy x1_save
+
 ;        addr[x] = TILE_DOT|TILE_UP|TILE_DOWN|TILE_RIGHT
+    lda #TILE_DOT|TILE_UP|TILE_DOWN|TILE_RIGHT
+    sta (mazeaddr),y
+
+    lda #TILE_DOT|TILE_LEFT|TILE_RIGHT
 ;        x += 1
+    iny
+
 ;        while x < x2:
+?2
 ;            addr[x] = TILE_DOT|TILE_LEFT|TILE_RIGHT
+    sta (mazeaddr),y
+
 ;            x += 1
+    iny
+    cpy x2
+    bcc ?2
 ;        addr[x2] = TILE_DOT|TILE_UP|TILE_DOWN|TILE_LEFT
+    lda #TILE_DOT|TILE_UP|TILE_DOWN|TILE_LEFT
+    sta (mazeaddr),y
+
 ;        y += get_rand_spacing()
+    jsr get_rand_spacing
+    clc
+    adc row_save
+    sta row_save
+    cmp #MAZE_BOT_ROW-1
+    bcc ?1
+
 ;    add_box(MAZE_BOT_ROW)
-;
+    ldy #MAZE_BOT_ROW
+    jsr add_box
+
+    PULLAXY
+    rts
+
+
+
 ;
 ;def init_maze():
 ;    clear_maze()
@@ -228,10 +308,20 @@ init_maze nop
     ldy #MAZE_BOT_ROW
     jsr setrow
     ldx #VPATH_NUM
+    stx maze_gen_col
 ?1  dex
     jsr setvpath
     cpx #0
     bne ?1
+
+    ldx #VPATH_NUM
+?2  dex
+    jsr sethpath
+    cpx #1
+    bne ?2
+
+    jsr finish_boxes
+
     rts
 
 ;##### Box handling/painting
@@ -267,9 +357,10 @@ init_maze nop
 ;# 03 X|XXXXX|XXXXX|XXXXX|XXXXX|XXXXX|X_______
 ;# 04 X|XXXXX|XXXXX|XXXXX+-----+XXXXX|X_______
 ;
-;NUM_LEVEL_BOX_PARAMS = 3
-;level_boxes = [0] * 10 * 6 * NUM_LEVEL_BOX_PARAMS
-;
+NUM_LEVEL_BOX_PARAMS = 3
+;level_boxes .ds 10*6*NUM_LEVEL_BOX_PARAMS
+level_boxes = $bd00
+
 ;# Box painting will be in hires so this array will become a tracker for the
 ;# hires display. It will need y address, y end address, x byte number. It's
 ;# possible for up to 3 boxes to get triggered to start painting when collecting
@@ -290,6 +381,13 @@ init_boxes nop
 ;def start_box(r, c):
 ;    zp.box_col_save = c
 ;    zp.box_row_save = r
+
+; col in X, row in Y
+start_box nop
+    stx box_col_save
+    sty box_row_save
+    rts
+
 ;
 ;def add_box(r):
 ;    i = zp.next_level_box
@@ -298,11 +396,33 @@ init_boxes nop
 ;    level_boxes[i + 2] = r
 ;    zp.box_row_save = r
 ;    zp.next_level_box += NUM_LEVEL_BOX_PARAMS
-;
+add_box nop
+    ldx next_level_box
+    lda box_col_save
+    sta level_boxes,x
+    inx
+    lda box_row_save
+    sta level_boxes,x
+    inx
+    tya
+    sta level_boxes,x
+    sta box_row_save
+    inx
+    stx next_level_box
+    rts
+
+
 ;def finish_boxes():
 ;    i = zp.next_level_box
 ;    level_boxes[i] = 0xff
-;
+finish_boxes nop
+    ldx next_level_box
+    lda #$ff
+    sta level_boxes,x
+    rts
+
+
+
 ;def check_boxes():
 ;    x = 0
 ;    pad.addstr(28, 0, str(level_boxes[0:21]))

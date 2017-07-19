@@ -32,16 +32,17 @@ partycrasher-software.hgr: partycrasher-software.png
 titles.dsk: cpbg.xex player-missile.hgr partycrasher-software.hgr kansasfest-hackfest.hgr
 	atrcopy titles.dsk boot -d kansasfest-hackfest.hgr@2000 player-missile.hgr@4000 partycrasher-software.hgr@2000 -b cpbg.xex --brun 6000 -f
 
-working-sprite-driver.s: $(BWSPRITE)
+working-sprite-driver.s: $(BWSPRITE) fatfont128.dat
 	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o working $(BWSPRITE)
 
-working.xex: working.s rand.s maze.s working-sprite-driver.s
+working.xex: working.s rand.s maze.s working-sprite-driver.s vars.s debug.s
 	rm -f working.xex
 	atasm -mae -oworking.xex working.s -Lworking.var -gworking.lst
 
 working.dsk: working.xex
 	rm -f working.dsk
 	atrcopy working.dsk boot -b working.xex --brun 6000 -f
+	cp working.var /home/rob/.wine/drive_c/applewin/APPLE2E.SYM
 
 clean:
 	rm -f cpbg.dsk cpbg.xex cpbg.var cpbg.lst cpbg-sprite-driver.s cpbg-bwsprite.s cpbg-hgrcols-7x1.s cpbg-hgrrows.s cpbg-apple_sprite9x11.s cpbg-fastfont.s cpbg-moldy_burger.s

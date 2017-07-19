@@ -1,5 +1,7 @@
     *= $6000
 
+.include "macros.s"
+
 ; os memory map
 KEYBOARD = $c000
 KBDSTROBE = $c010
@@ -63,7 +65,15 @@ tempcol       .ds 1
     *= $0040
 mazeaddr    .ds 2
 next_level_box .ds 1
+box_row_save .ds 1
+box_col_save .ds 1
+maze_gen_col .ds 1
 
+
+; memory map
+; BF00 - BFFF: damage for page 1
+; BE00 - BEFF: damage for page 2
+; BD00 - BDFF: level box storage
 
 ; constants
 
@@ -73,6 +83,12 @@ MAXPOSX     = 220
 MAXPOSY     = 192 - 16
 
     *= $80
+
+    *= $f0
+debug_a .ds 1
+debug_x .ds 1
+debug_y .ds 1
+debug_last_key .ds 1
 
 
     *= $6000
@@ -121,5 +137,7 @@ game_loop nop
 .include "rand.s"
 .include "screen.s"
 .include "maze.s"
+.include "debug.s"
 
-
+; vars must be last
+.include "vars.s"
