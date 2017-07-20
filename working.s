@@ -144,8 +144,7 @@ clr1
     rts
 
 init_game nop
-    jsr init_maze
-    jsr copytexthgr
+    jsr initbackground
     lda #1
     jsr init_level
     lda #1
@@ -157,6 +156,13 @@ init_game nop
     sta countdown_time
     sta config_quit
     rts
+
+initbackground nop
+    jsr show_page1
+    jsr init_maze
+    jsr copytexthgr  ; page2 becomes the source
+    jsr wipeclear1
+    jsr wipe2to1
 
 game_loop nop
     inc frame_count
