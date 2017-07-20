@@ -10,18 +10,20 @@ player_score_h .byte 0, 0, 0, 0
 ;# amidar movement.
 MAX_PLAYERS = 4
 MAX_AMIDARS = VPATH_NUM + 1  ; # one enemy per vpath + one orbiter
-MAX_ACTORS = MAX_PLAYERS + MAX_AMIDARS
+;MAX_ACTORS = MAX_PLAYERS + MAX_AMIDARS
+MAX_ACTORS = 16
 FIRST_PLAYER = 0
 FIRST_AMIDAR = MAX_PLAYERS
 LAST_PLAYER = FIRST_AMIDAR - 1
-LAST_AMIDAR = MAX_ACTORS - 1
+LAST_AMIDAR = LAST_PLAYER + MAX_AMIDARS
 
 PLAYER_TYPE = 0
 ORBITER_TYPE = 1
 AMIDAR_TYPE = 2
 actor_type .byte PLAYER_TYPE, PLAYER_TYPE, PLAYER_TYPE, PLAYER_TYPE
-    .byte ORBITER_TYPE
-    .byte AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE
+    .byte ORBITER_TYPE, AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE
+    .byte AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE
+    .byte AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE
 actor_init_func_l .byte <init_player, <init_orbiter, <init_amidar
 actor_init_func_h .byte >init_player, >init_orbiter, >init_amidar
 
@@ -33,28 +35,30 @@ actor_init_func_h .byte >init_player, >init_orbiter, >init_amidar
 ;
 ; Number of sprites must be a power of 2
 
-actor_active .byte 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0 , $ff ; 1 = active, 0 = skip
+source_actor_active .byte 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0 , $ff ; 1 = active, 0 = skip
 
-actor_l
+source_actor_l
     .byte <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11
     .byte <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11
     .byte <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11
     .byte <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11
 
-actor_h
+source_actor_h
     .byte >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11
     .byte >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11
     .byte >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11
     .byte >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11
 
-actor_x
+source_actor_x
     .byte 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0 , $ff
 
-actor_y
+source_actor_y
     .byte 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0 , $ff
+
+source_end .byte $ff
 
 ; [i*7 for i in range(40)]
-player_col_to_x .byte 0, 7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 77, 84, 91, 98, 105, 112, 119, 126, 133, 140, 147, 154, 161, 168, 175, 182, 189, 196, 203, 210, 217, 224, 231, 238, 245, 252, 259, 266, 273
+player_col_to_x .byte 0, 7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 77, 84, 91, 98, 105, 112, 119, 126, 133, 140, 147, 154, 161, 168, 175, 182, 189, 196, 203, 210, 217, 224, 248, 248, 248, 248, 248, 248, 248, 248
 ; [i*8 for i in range(24)]
 player_row_to_y .byte 0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184
 
@@ -94,6 +98,15 @@ add_score nop
     rts
 
 
+init_actors_once nop
+    ldx #0
+?1  lda source_actor_active,x
+    sta actor_active,x
+    inx
+    cpx #source_end-source_actor_active
+    bcc ?1
+    rts
+
 init_players nop
     sta config_num_players
 
@@ -118,8 +131,8 @@ init_level nop
     sta actor_active,y
     iny
     bne ?2
-    lda #0
-?3  cpy #MAX_PLAYERS
+?3  lda #0
+    cpy #MAX_PLAYERS
     bcs ?4
     sta actor_active,y
     iny

@@ -137,6 +137,22 @@ wipe2to1_wait nop
     bcc wipe2to1_loop
     rts
 
+copy2to1 lda #$40
+    sta ?source+2
+    lda #$20
+    sta ?dest+2
+?outer ldy #0
+?source lda $ff00,y
+?dest sta $ff00,y
+    iny
+    bne ?source
+    inc ?source+2
+    inc ?dest+2
+    lda ?dest+2
+    cmp #$40
+    bcc ?outer
+    rts
+
 
 copytexthgr nop
     ldy #0      ; y is rows

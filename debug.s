@@ -42,32 +42,42 @@ printstr ; X = column, Y = row, scratch_ptr is text (null terminated)
 ?exit rts
 
 debug_player nop
+    lda #22
+    sta scratch_row
+
     ldx #0
     lda actor_input_dir,x
     ldx #35
-    ldy #23
+    ldy scratch_row
+    jsr printhex
+    ldx #0
+    lda actor_dir,x
+    ldx #38
+    ldy scratch_row
     jsr printhex
 
+    dec scratch_row
     ldx #0
     lda actor_x,x
     ldx #35
-    ldy #22
+    ldy scratch_row
     jsr printhex
     ldx #0
     lda actor_y,x
     ldx #38
-    ldy #22
+    ldy scratch_row
     jsr printhex
 
+    dec scratch_row
     ldx #0
     lda actor_col,x
     ldx #35
-    ldy #21
+    ldy scratch_row
     jsr printhex
     ldx #0
     lda actor_row,x
     ldx #38
-    ldy #21
+    ldy scratch_row
     jsr printhex
 
     rts

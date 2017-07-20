@@ -119,6 +119,7 @@ start nop
 
     jsr clrscr
     jsr init_screen_once
+    jsr init_actors_once
     jsr title_screen
     jsr init_game
     jsr game_loop
@@ -175,8 +176,10 @@ initbackground nop
     jsr show_page1
     jsr init_maze
     jsr copytexthgr  ; page2 becomes the source
-    jsr wipeclear1
-    jsr wipe2to1
+;    jsr wipeclear1
+;    jsr wipe2to1
+    jsr copy2to1
+    rts
 
 game_loop nop
     inc frame_count
