@@ -32,6 +32,7 @@ scratch_addr  .ds 2
 scratch_ptr   .ds 2
 scratch_0     .ds 1
 scratch_1     .ds 1
+scratch_2 .ds 1
 scratch_index .ds 1
 scratch_count .ds 1
 scratch_col   .ds 1
@@ -68,6 +69,16 @@ next_level_box .ds 1
 box_row_save .ds 1
 box_col_save .ds 1
 maze_gen_col .ds 1
+config_num_players .ds 1
+
+    *= $50
+current_actor .ds 1
+current_dir .ds 1
+r .ds 1
+c .ds 1
+round_robin_index .ds 2
+level .ds 1
+last_enemy .ds 1
 
 
 ; memory map
@@ -128,6 +139,11 @@ clr1
 init_game nop
     jsr init_maze
     jsr copytexthgr
+    lda #1
+    jsr init_level
+    lda #1
+    sta config_num_players
+    jsr init_actors
     rts
 
 game_loop nop
@@ -137,6 +153,8 @@ game_loop nop
 .include "rand.s"
 .include "screen.s"
 .include "maze.s"
+.include "actors.s"
+.include "logic.s"
 .include "debug.s"
 
 ; vars must be last

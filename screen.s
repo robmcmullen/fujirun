@@ -17,6 +17,7 @@ init_screen_once nop
     jsr draw_to_page1
     rts
 
+
 ; character in A, col in X
 text_put_col nop
     sta $0400,x ; row 0
@@ -188,3 +189,142 @@ draw_to_page2 lda #$60
 
 fastfont jmp $ffff
 
+
+
+restorebg_init
+    rts
+
+restorebg_driver
+    ; copy damaged characters back to screen
+    ;jsr copytexthgr
+    ldy #0
+    sty param_count
+restorebg_loop1 ldy param_count
+    cpy damageindex
+    bcc restorebg_cont  ; possible there's no damage, so have to check first
+    ldy #0
+    sty damageindex  ; clear damage index for this page
+    rts
+restorebg_cont lda (damageptr),y ; groups of 4 x1 -> x2, y1 -> y2
+    sta param_x
+    iny
+    lda (damageptr),y
+    sta param_col
+    iny
+    lda (damageptr),y
+    sta param_y
+    iny
+    lda (damageptr),y
+    sta param_row
+    iny
+    sty param_count
+
+    ldy param_y
+restorebg_row lda textrows_h,y
+    sta restorebg_row_smc+2
+    lda textrows_l,y
+    sta restorebg_row_smc+1
+    ldx param_x
+restorebg_row_smc lda $ffff,x
+    jsr fastfont
+    inx
+    cpx param_col
+    bcc restorebg_row_smc
+    iny
+    cpy param_row
+    beq restorebg_row
+    bcc restorebg_row
+    bcs restorebg_loop1
+
+
+
+; Draw sprites by looping through the list of sprites
+renderstart
+    ldy #0
+    sty damageindex
+
+    lda #sprite_l - sprite_active
+    sta param_count
+    inc renderroundrobin_smc+1
+
+renderroundrobin_smc
+    ldy #0
+    sty param_index
+
+renderloop
+    lda param_index
+    and #sprite_l - sprite_active - 1
+    tay
+    lda sprite_active,y
+    beq renderskip      ; skip if zero
+    lda sprite_l,y
+    sta jsrsprite_smc+1
+    lda sprite_h,y
+    sta jsrsprite_smc+2
+    lda sprite_x,y
+    sta param_x
+    lda sprite_y,y
+    sta param_y
+    jmp jsrsprite_smc
+jsrsprite_smc
+    jsr $ffff           ; wish you could JSR ($nnnn)
+
+    ldy damageindex
+    lda scratch_col      ; contains the byte index into the line
+    sta (damageptr),y
+    iny
+    clc
+    adc damage_w
+    sta (damageptr),y
+    iny
+
+    ; need to convert hgr y values to char rows
+    lda param_y
+    lsr a
+    lsr a
+    lsr a
+    sta (damageptr),y
+    iny
+    lda param_y
+    clc
+    adc damage_h
+    lsr a
+    lsr a
+    lsr a
+    sta (damageptr),y
+    iny
+    sty damageindex
+
+renderskip
+    inc param_index
+    dec param_count
+    bne renderloop
+
+renderend
+    rts
+
+
+
+
+; Sprite data is interleaved so a simple indexed mode can be used. This is not
+; convenient to set up but makes faster accessing because you don't have to 
+; increment the index register. For example, all the info about sprite #2 can
+; be indexed using Y = 2 on the indexed operators, e.g. "lda sprite_active,y",
+; "lda sprite_x,y", etc.
+;
+; Number of sprites must be a power of 2
+
+sprite_active
+    .byte 1, 1, 1, 1, 1, 1, 1, 1  ; 1 = active, 0 = skip
+
+sprite_l
+    .byte <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11
+
+sprite_h
+    .byte >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11
+
+sprite_x
+    .byte 80, 164, 33, 45, 4, 9, 180, 18
+
+sprite_y
+    .byte 116, 126, 40, 60, 80, 100, 9, 140

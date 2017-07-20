@@ -62,3 +62,46 @@ get_rand_byte nop
     eor #$3f
     sta randval8
     rts
+
+
+; # Get random starting columns for enemies by swapping elements in a list
+; # several times
+; def get_col_randomizer(r):
+;     r[:] = vpath_cols[:]
+;     x = 10
+;     while x >= 0:
+;         i1 = get_rand_col()
+;         i2 = get_rand_col()
+;         old1 = r[i1]
+;         r[i1] = r[i2]
+;         r[i2] = old1
+;         x -= 1
+
+; addr in scratch_addr, clobbers all
+get_col_randomizer nop
+    ldy #VPATH_NUM
+?1  dey
+    lda vpath_cols,y
+    sta (scratch_addr),y
+    cpy #0
+    bne ?1
+
+    lda #10
+    sta scratch_count
+get_col_lp  jsr get_rand_col
+    sta scratch_0
+    jsr get_rand_col
+    sta scratch_1
+    ldy scratch_0
+    lda (scratch_addr),y
+    sta scratch_2
+    ldy scratch_1
+    lda (scratch_addr),y
+    ldy scratch_0
+    sta (scratch_addr),y
+    ldy scratch_1
+    lda scratch_2
+    sta (scratch_addr),y
+    dex scratch_count
+    bne get_col_lp
+    rts
