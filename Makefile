@@ -35,7 +35,7 @@ titles.dsk: cpbg.xex player-missile.hgr partycrasher-software.hgr kansasfest-hac
 working-sprite-driver.s: $(BWSPRITE) fatfont128.dat
 	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o working $(BWSPRITE)
 
-working.xex: working.s rand.s maze.s working-sprite-driver.s vars.s debug.s
+working.xex: working.s rand.s maze.s working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s
 	rm -f working.xex
 	atasm -mae -oworking.xex working.s -Lworking.var -gworking.lst
 

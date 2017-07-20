@@ -33,7 +33,7 @@ actor_init_func_h .byte >init_player, >init_orbiter, >init_amidar
 ;
 ; Number of sprites must be a power of 2
 
-actor_active .byte 1, 0, 0, 0,  1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0 , $ff ; 1 = active, 0 = skip
+actor_active .byte 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0 , $ff ; 1 = active, 0 = skip
 
 actor_l
     .byte <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11
@@ -94,15 +94,37 @@ add_score nop
     rts
 
 
+init_players nop
+    sta config_num_players
 
 
-; level number in X, clobbers
+; 
 init_level nop
-    stx level
+    ldx level
     lda level_enemies,x
-    clc
-    adc #FIRST_AMIDAR
-    sta last_enemy
+    tay
+    lda #$ff
+    sta actor_active+FIRST_AMIDAR,y
+    lda #1
+?1  sta actor_active+FIRST_AMIDAR-1,y
+    dey
+    bne ?1
+
+    ; clear active players
+    ldy #0
+    lda #1
+?2  cpy config_num_players
+    bcs ?3
+    sta actor_active,y
+    iny
+    bne ?2
+    lda #0
+?3  cpy #MAX_PLAYERS
+    bcs ?4
+    sta actor_active,y
+    iny
+    bne ?3
+?4  rts
 
 
 ;

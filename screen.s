@@ -46,6 +46,33 @@ text_put_col nop
     sta $07d0,x ; row 23
     rts
 
+text_put_col2 nop
+    sta $0800,x ; row 0
+    sta $0880,x ; row 1
+    sta $0900,x ; row 2
+    sta $0980,x ; row 3
+    sta $0a00,x ; row 4
+    sta $0a80,x ; row 5
+    sta $0b00,x ; row 6
+    sta $0b80,x ; row 7
+    sta $0828,x ; row 8
+    sta $08a8,x ; row 9
+    sta $0928,x ; row 10
+    sta $09a8,x ; row 11
+    sta $0a28,x ; row 12
+    sta $0aa8,x ; row 13
+    sta $0b28,x ; row 14
+    sta $0ba8,x ; row 15
+    sta $0850,x ; row 16
+    sta $08d0,x ; row 17
+    sta $0950,x ; row 18
+    sta $09d0,x ; row 19
+    sta $0a50,x ; row 20
+    sta $0ad0,x ; row 21
+    sta $0b50,x ; row 22
+    sta $0bd0,x ; row 23
+    rts
+
 ; maze is text screen 1
 textrows_l .byte $00, $80, $00, $80, $00, $80, $00, $80
         .byte $28, $a8, $28, $a8, $28, $a8, $28, $a8

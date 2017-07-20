@@ -119,6 +119,7 @@ start nop
 
     jsr clrscr
     jsr init_screen_once
+    jsr title_screen
     jsr init_game
     jsr game_loop
 
@@ -141,14 +142,27 @@ clr1
     ldx clr1+2
     cpx #$40
     bcc clr1
+
+    lda #0
+    ldx #39
+?1  jsr text_put_col ; text page 1
+    jsr text_put_col2 ; text page 2
+    dex
+    bpl ?1
+    rts
+
+title_screen nop
+    lda #1
+    sta config_num_players
+    lda #0
+    sta config_quit
+    lda #1
+    sta level
     rts
 
 init_game nop
     jsr initbackground
-    lda #1
     jsr init_level
-    lda #1
-    sta config_num_players
     jsr init_actors
     lda #0
     sta frame_count
@@ -169,6 +183,9 @@ game_loop nop
     bne ?1
     inc frame_count+1
 ?1  jsr userinput
+
+    jsr debug_player
+
     lda config_quit
     beq ?2
     rts
@@ -266,7 +283,7 @@ userinput
     lda KEYBOARD
     pha
     ldx #38
-    ldy #22
+    ldy #23
     jsr printhex
     pla
     bpl input_not_movement ; stop movement of player if no direction input
