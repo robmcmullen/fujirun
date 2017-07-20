@@ -1,24 +1,3 @@
-; ##### Collision detection
-; 
-; # Check possible collisions between the current player and any enemies
-; def check_collisions():
-;     r = actor_row[zp.current_actor]
-;     c = actor_col[zp.current_actor]
-;     enemy_index = FIRST_AMIDAR
-;     while enemy_index <= zp.last_enemy:
-;         # Will provide pac-man style bug where they could pass through each
-;         # other because it's only checking tiles
-;         if actor_row[enemy_index] == r and actor_col[enemy_index] == c:
-;             start_exploding()
-;             break
-;         enemy_index += 1
-; 
-; def start_exploding():
-;     actor_status[zp.current_actor] = PLAYER_EXPLODING
-;     actor_frame_counter[zp.current_actor] = EXPLODING_TIME
-; 
-; 
-; ##### Scoring routines
 ; 
 ; def check_dots():
 ;     r = actor_row[zp.current_actor]
@@ -32,6 +11,38 @@
 ;         addr[c] &= ~TILE_DOT
 ; 
 ;         player_score[zp.current_actor] += DOT_SCORE
+check_dots nop
+    lda actor_row,x
+    sta r
+    lda actor_col,x
+    sta c
+    jsr has_dot
+    beq ?1
+    lda r
+    sta dot_eaten_row,x
+    lda c
+    sta dot_eaten_col,x
+
+    ldy r
+    jsr mazerow
+    ldy c
+    lda (mazeaddr),y
+    and #CLEAR_TILE_DOT
+    sta (mazeaddr),y
+
+    ; update damage! Needs to update both screens
+    jsr damage_maze
+
+    lda #DOT_SCORE
+    jsr add_score
+?1  rts
+
+
+; update both screens!
+damage_maze nop
+    rts
+
+
 ; 
 ; def update_background():
 ;     zp.current_actor = 0

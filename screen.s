@@ -243,8 +243,6 @@ renderstart
     ldy #0
     sty damageindex
 
-    lda #sprite_l - sprite_active
-    sta param_count
     inc renderroundrobin_smc+1
 
 renderroundrobin_smc
@@ -253,17 +251,18 @@ renderroundrobin_smc
 
 renderloop
     lda param_index
-    and #sprite_l - sprite_active - 1
+    and #actor_l - actor_active - 1
     tay
-    lda sprite_active,y
+    lda actor_active,y
     beq renderskip      ; skip if zero
-    lda sprite_l,y
+    bmi renderend ; end if negative
+    lda actor_l,y
     sta jsrsprite_smc+1
-    lda sprite_h,y
+    lda actor_h,y
     sta jsrsprite_smc+2
-    lda sprite_x,y
+    lda actor_x,y
     sta param_x
-    lda sprite_y,y
+    lda actor_y,y
     sta param_y
     jmp jsrsprite_smc
 jsrsprite_smc
@@ -304,27 +303,7 @@ renderend
     rts
 
 
+damage_text nop
+    rts
 
 
-; Sprite data is interleaved so a simple indexed mode can be used. This is not
-; convenient to set up but makes faster accessing because you don't have to 
-; increment the index register. For example, all the info about sprite #2 can
-; be indexed using Y = 2 on the indexed operators, e.g. "lda sprite_active,y",
-; "lda sprite_x,y", etc.
-;
-; Number of sprites must be a power of 2
-
-sprite_active
-    .byte 1, 1, 1, 1, 1, 1, 1, 1  ; 1 = active, 0 = skip
-
-sprite_l
-    .byte <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11
-
-sprite_h
-    .byte >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11
-
-sprite_x
-    .byte 80, 164, 33, 45, 4, 9, 180, 18
-
-sprite_y
-    .byte 116, 126, 40, 60, 80, 100, 9, 140

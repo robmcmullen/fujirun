@@ -60,12 +60,30 @@ TITLE_SCREEN_TIME = 100
 ;     addr = mazerow(r)
 ;     allowed = addr[c] & DIR_MASK
 ;     return allowed
-; 
+get_allowed_dirs nop
+    ldy r
+    jsr mazerow
+    ldy c
+    lda (mazeaddr),y
+    and #DIR_MASK
+    sta allowed
+    rts
+
+
+
 ; # See if current tile has a dot
 ; def has_dot(r, c):
 ;     addr = mazerow(r)
 ;     return addr[c] & TILE_DOT
-; 
+has_dot nop
+    ldy r
+    jsr mazerow
+    ldy c
+    lda (mazeaddr),y
+    and #TILE_DOT
+    rts
+
+
 ; # clear a dot
 ; def clear_dot(r, c):
 ;     addr = mazerow(r)
@@ -84,6 +102,30 @@ TITLE_SCREEN_TIME = 100
 ;     else:
 ;         logic_log.error("bad direction % dir")
 ;     return r, c
+get_next_tile nop
+    lda actor_dir,x
+    sta scratch_0
+    and #TILE_UP
+    beq ?down
+    dec r
+    rts
+?down lda scratch_0
+    and #TILE_DOWN
+    beq ?left
+    inc r
+    rts
+?left lda scratch_0
+    and #TILE_LEFT
+    beq ?right
+    dec c
+    rts
+?right lda scratch_0
+    and #TILE_RIGHT
+    beq ?end
+    inc c
+?end rts
+
+
 ; 
 ; # Choose a target column for the next up/down direction at a bottom or top T
 ; def get_next_round_robin(rr_table, x):
@@ -124,10 +166,16 @@ TITLE_SCREEN_TIME = 100
 ;     else:
 ;         sub = actor_xpixel[zp.current_actor]
 ;         return sub == X_MIDPOINT
-; 
+
+
+
+
 ; # Move enemy given the enemy index
 ; def move_enemy():
+move_enemy nop
 ;     current = actor_dir[zp.current_actor]
+    lda actor_dir,x
+    sta current
 ; 
 ;     # check sub-pixel location to see if we've reached a decision point
 ;     temp = check_midpoint(current)
@@ -156,6 +204,8 @@ TITLE_SCREEN_TIME = 100
 ;                 decide_orbiter()
 ;             else:
 ;                 decide_direction()
+    rts
+
 ; 
 ; def pixel_move(current):
 ;     if current & TILE_UP:
@@ -340,21 +390,40 @@ set_speed nop
 ;     actor_updown[zp.current_actor] = updown
 ;     actor_dir[zp.current_actor] = current
 ;     set_speed(current)
-; 
+
+
+
 ; def move_player():
+move_player nop
 ;     r = actor_row[zp.current_actor]
 ;     c = actor_col[zp.current_actor]
+    lda actor_row,x
+    sta r
+    lda actor_col,x
+    sta c
 ;     allowed = get_allowed_dirs(r, c)
+    jsr get_allowed_dirs
 ;     current = actor_dir[zp.current_actor]
+    lda actor_dir,x
+    sta current
 ;     d = actor_input_dir[zp.current_actor]
+    lda actor_input_dir,x
+    sta d
 ;     pad.addstr(26, 0, "r=%d c=%d allowed=%s d=%s current=%s      " % (r, c, str_dirs(allowed), str_dirs(d), str_dirs(current)))
 ;     if d:
+    beq ?end
 ;         if allowed & d:
+    and allowed
+    beq ?illegal
 ;             # player wants to go in an allowed direction, so go!
 ;             actor_dir[zp.current_actor] = d
 ;             r, c = get_next_tile(r, c, d)
 ;             actor_row[zp.current_actor] = r
 ;             actor_col[zp.current_actor] = c
+    lda d
+    sta actor_dir,x
+    jmp ?continue
+
 ;         else:
 ;             # player wants to go in an illegal direction. instead, continue in
 ;             # direction that was last requested
@@ -363,6 +432,32 @@ set_speed nop
 ;                 r, c = get_next_tile(r, c, current)
 ;                 actor_row[zp.current_actor] = r
 ;                 actor_col[zp.current_actor] = c
+?illegal lda allowed
+    and current
+    bne ?continue
+    rts
+
+?continue jsr get_next_tile
+    lda r
+    sta actor_row,x
+    lda c
+    sta actor_col,x
+
+; update pixel position
+    ldy r
+    lda player_row_to_y,y
+    clc
+    adc actor_ypixel,x
+    sta actor_y,x
+    ldy c
+    lda player_col_to_x,y
+    clc
+    adc actor_xpixel,x
+    sta actor_x,x
+
+?end
+    rts
+
 ; 
 ; 
 ; ##### Collision detection
@@ -379,8 +474,32 @@ set_speed nop
 ;             start_exploding()
 ;             break
 ;         enemy_index += 1
-; 
+check_collisions nop
+    lda actor_row,x
+    sta r
+    lda actor_col,x
+    sta c
+
+    ldy #FIRST_AMIDAR-1
+?enemy iny
+    lda actor_active,y
+    bmi end_collisions ; negative = end
+    beq ?enemy ; zero = skip
+    lda actor_row,y
+    cpy r
+    beq start_exploding
+    lda actor_col,y
+    cpy c
+    bne ?enemy
+
 ; def start_exploding():
 ;     actor_status[zp.current_actor] = PLAYER_EXPLODING
 ;     actor_frame_counter[zp.current_actor] = EXPLODING_TIME
+start_exploding lda #PLAYER_EXPLODING
+    sta actor_status,x
+    lda #EXPLODING_TIME
+    sta actor_frame_counter,x
+
+end_collisions rts
+
 

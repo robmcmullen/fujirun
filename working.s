@@ -70,10 +70,16 @@ box_row_save .ds 1
 box_col_save .ds 1
 maze_gen_col .ds 1
 config_num_players .ds 1
+config_quit .ds 1
+frame_count .ds 2
+countdown_time .ds 1
+still_alive .ds 1
 
     *= $50
 current_actor .ds 1
-current_dir .ds 1
+current .ds 1 ; current direction
+allowed .ds 1 ; allowed directions
+d .ds 1 ; actor input dir
 r .ds 1
 c .ds 1
 round_robin_index .ds 2
@@ -100,6 +106,7 @@ debug_a .ds 1
 debug_x .ds 1
 debug_y .ds 1
 debug_last_key .ds 1
+frame_count .ds 2
 
 
     *= $6000
@@ -144,10 +151,212 @@ init_game nop
     lda #1
     sta config_num_players
     jsr init_actors
+    lda #0
+    sta frame_count
+    sta frame_count+1
+    sta countdown_time
+    sta config_quit
     rts
 
 game_loop nop
+    inc frame_count
+    bne ?1
+    inc frame_count+1
+?1  jsr userinput
+    lda config_quit
+    beq ?2
+    rts
+?2  lda #FIRST_AMIDAR-1
+    sta current_actor
+?enemy inc current_actor
+    ldx current_actor
+    lda actor_active,x
+    bpl ?player ; negative = end
+    beq ?enemy ; zero = skip
+    jsr move_enemy
+    jmp ?enemy
+
+?player lda #0
+    sta still_alive
+    lda #$ff
+    sta current_actor
+?p1 inc current_actor
+    ldx current_actor
+    lda actor_type,x
+    cmp #PLAYER_TYPE
+    bne ?alive
+    lda actor_active,x
+    beq ?p1 ; zero = skip
+    jsr handle_player
+    jmp ?p1
+
+?alive lda still_alive
+    bne ?draw
+    dec countdown_time
+    bne ?draw
+    rts
+
+;        erase_sprites()
+;        update_background()
+;        draw_actors()
+;        show_screen()
+?draw jsr restorebg_driver
+    jsr renderstart
+    jsr pageflip
+    jsr wait
     jmp game_loop
+
+
+
+
+handle_player nop
+;            if actor_status[zp.current_actor] == PLAYER_REGENERATING:
+;                # If regenerating, change to alive if the player starts to move
+;                if actor_input_dir[zp.current_actor] > 0:
+;                    actor_status[zp.current_actor] = PLAYER_ALIVE
+    lda actor_status,x
+    cmp #PLAYER_REGENERATING
+    bne ?alive
+    lda actor_input_dir,x
+    beq ?final
+    lda #PLAYER_ALIVE
+    sta actor_status,x
+
+;            if actor_status[zp.current_actor] == PLAYER_ALIVE:
+;                # only move and check collisions if alive
+;                move_player()
+;                check_collisions()
+?alive lda actor_status,x
+    cmp #PLAYER_ALIVE
+    bne ?dots
+    jsr move_player
+    jsr check_collisions
+
+;            if actor_status[zp.current_actor] == PLAYER_ALIVE:
+;                # only check for points if still alive
+;                check_dots()
+;                check_boxes()
+
+?dots lda actor_status,x
+    cmp #PLAYER_ALIVE
+    bne ?final
+    jsr check_dots
+    jsr check_boxes
+
+;            if actor_status[zp.current_actor] != GAME_OVER:
+;                still_alive += 1
+;            zp.current_actor += 1
+
+?final lda actor_status,x
+    cmp #GAME_OVER
+    beq ?end
+    inc still_alive
+?end rts
+
+
+
+
+userinput
+    lda KEYBOARD
+    pha
+    ldx #38
+    ldy #22
+    jsr printhex
+    pla
+    bpl input_not_movement ; stop movement of player if no direction input
+
+    ; setting the keyboard strobe causes the key to enter repeat mode if held
+    ; down, which causes a pause after the initial movement. Not setting the
+    ; strobe allows smooth movement from the start, but there's no way to stop
+    ;sta KBDSTROBE
+    ldx #0
+
+check_up cmp #$8d  ; up arrow
+    beq input_up
+    cmp #$c9  ; I
+    bne check_down
+input_up lda #TILE_UP
+    sta actor_input_dir,x
+    rts
+
+check_down cmp #$af  ; down arrow
+    beq input_down
+    cmp #$d4  ; K
+    bne check_left
+input_down lda #TILE_DOWN
+    sta actor_input_dir,x
+    rts
+
+check_left cmp #$88  ; left arrow
+    beq input_left
+    cmp #$c8  ; J
+    bne check_right
+input_left lda #TILE_LEFT
+    sta actor_input_dir,x
+    rts
+
+check_right cmp #$95  ; right arrow
+    beq input_right
+    cmp #$ce  ; L
+    bne input_not_movement
+input_right lda #TILE_RIGHT
+    sta actor_input_dir,x
+    rts
+
+input_not_movement lda #0
+    sta actor_input_dir,x
+
+check_special cmp #$80 + 32
+    beq input_space
+    cmp #$80 + '.'
+    beq input_period
+    cmp #$80 + 'P'
+    beq input_period
+    rts
+
+input_space
+    jmp debugflipscreens
+
+input_period
+    jsr wait
+    lda KEYBOARD
+    bpl input_period
+    cmp #$80 + 'P'
+    beq input_period
+    rts
+
+debugflipscreens
+    lda #20
+    sta scratch_count
+debugloop
+    jsr pageflip
+    jsr wait
+    jsr pageflip
+    jsr wait
+    dec scratch_count
+    bne debugloop
+    rts
+
+
+wait
+    ldy     #$06    ; Loop a bit
+wait_outer
+    ldx     #$ff
+wait_inner
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    dex
+    bne     wait_inner
+    dey
+    bne     wait_outer
+    rts
+
+
 
 .include "working-sprite-driver.s"
 .include "rand.s"
@@ -155,6 +364,7 @@ game_loop nop
 .include "maze.s"
 .include "actors.s"
 .include "logic.s"
+.include "background.s"
 .include "debug.s"
 
 ; vars must be last

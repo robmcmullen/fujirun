@@ -1,6 +1,8 @@
 level_enemies .byte 55, 4, 5, 6, 7, 8 ;# level starts counting from 1, so dummy zeroth level info
 level_speeds .byte 255, 200, 210, 220, 230, 240 ;# increment of fractional pixel per game frame
 player_score_row .byte 2, 7, 12, 17
+player_score_l .byte 0, 0, 0, 0
+player_score_h .byte 0, 0, 0, 0
 
 
 ;# sprites all use the same table. In the sample configuration, sprites 0 - 3
@@ -20,9 +22,42 @@ AMIDAR_TYPE = 2
 actor_type .byte PLAYER_TYPE, PLAYER_TYPE, PLAYER_TYPE, PLAYER_TYPE
     .byte ORBITER_TYPE
     .byte AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE, AMIDAR_TYPE
-actor_active .byte 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, $ff
 actor_init_func_l .byte <init_player, <init_orbiter, <init_amidar
 actor_init_func_h .byte >init_player, >init_orbiter, >init_amidar
+
+; Sprite data is interleaved so a simple indexed mode can be used. This is not
+; convenient to set up but makes faster accessing because you don't have to 
+; increment the index register. For example, all the info about sprite #2 can
+; be indexed using Y = 2 on the indexed operators, e.g. "lda sprite_active,y",
+; "lda sprite_x,y", etc.
+;
+; Number of sprites must be a power of 2
+
+actor_active .byte 1, 0, 0, 0,  1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0 , $ff ; 1 = active, 0 = skip
+
+actor_l
+    .byte <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11
+    .byte <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11
+    .byte <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11
+    .byte <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11, <APPLE_SPRITE9X11
+
+actor_h
+    .byte >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11
+    .byte >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11
+    .byte >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11
+    .byte >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11, >APPLE_SPRITE9X11
+
+actor_x
+    .byte 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0 , $ff
+
+actor_y
+    .byte 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0 , $ff
+
+; [i*7 for i in range(40)]
+player_col_to_x .byte 0, 7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 77, 84, 91, 98, 105, 112, 119, 126, 133, 140, 147, 154, 161, 168, 175, 182, 189, 196, 203, 210, 217, 224, 231, 238, 245, 252, 259, 266, 273
+; [i*8 for i in range(24)]
+player_row_to_y .byte 0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184
+
 
 STARTING_LIVES = 3
 BONUS_LIFE = 10000
@@ -44,8 +79,22 @@ GAME_OVER = 255
 ;
 ;# Scores
 ;
-DOT_SCORE = 10
-PAINT_SCORE_PER_LINE = 100
+DOT_SCORE = 1
+PAINT_SCORE_PER_LINE = 10
+
+add_score nop
+    sed
+    clc
+    adc player_score_l,x
+    sta player_score_l,x
+    lda player_score_h,x
+    adc #0
+    sta player_score_h,x
+    cld
+    rts
+
+
+
 
 ; level number in X, clobbers
 init_level nop
@@ -186,6 +235,9 @@ init_player nop
     sta player_lives,x
     lda #BONUS_LIFE
     sta player_next_target_score,x
+    lda #0
+    sta player_score_l
+    sta player_score_h
     rts
 
 
@@ -232,7 +284,7 @@ init_actors nop
     sta current_actor
 init_actors_loop  inc current_actor
     ldx current_actor
-    lda actor_status,x
+    lda actor_active,x
     bpl ?2 ; negative = end
     rts
 ?2  beq init_actors_loop ; zero = skip

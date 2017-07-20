@@ -8,6 +8,7 @@ TILE_HORZ = TILE_LEFT|TILE_RIGHT
 TILE_VERT = TILE_UP|TILE_DOWN
 DIR_MASK = $0f
 TILE_DOT = $10
+CLEAR_TILE_DOT = %11101111
 
 LEFT_TILE = TILE_DOT|TILE_RIGHT
 MIDDLE_TILE = TILE_DOT|TILE_LEFT|TILE_RIGHT
@@ -456,6 +457,10 @@ finish_boxes nop
 ;                level_boxes[x] = 0  # Set flag so we don't check this box again
 ;
 ;        x += 3
+check_boxes nop
+    rts
+
+
 ;
 ;def mark_box_for_painting(r1, r2, c):
 ;    box_log.debug("Marking box, player $%d @ %d,%d -> %d,%d" % (zp.current_actor, r1, c, r2, c + BOX_WIDTH))
