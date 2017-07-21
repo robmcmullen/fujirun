@@ -197,7 +197,7 @@ game_loop nop
 ?enemy inc current_actor
     ldx current_actor
     lda actor_active,x
-    bpl ?player ; negative = end
+    bmi ?player ; negative = end
     beq ?enemy ; zero = skip
     jsr move_enemy
     jmp ?enemy

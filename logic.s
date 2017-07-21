@@ -51,6 +51,27 @@ TITLE_SCREEN_TIME = 100
 ;     else:
 ;         c = None
 ;     zp.sprite_addr = c
+
+
+get_sprite nop
+; update pixel position
+    lda actor_row,x
+    tay
+    lda player_row_to_y,y
+    clc
+    adc actor_ypixel,x
+    sta actor_y,x
+    lda actor_col,x
+    tay
+    lda player_col_to_x,y
+    clc
+    adc actor_xpixel,x
+    sta actor_x,x
+
+?end
+    rts
+
+
 ; 
 ; 
 ; ##### Game logic
@@ -176,6 +197,17 @@ move_enemy nop
 ;     current = actor_dir[zp.current_actor]
     lda actor_dir,x
     sta current
+
+    lda actor_row,x
+    clc
+    adc #1
+    and #$0f
+    sta actor_row,x
+    lda actor_col,x
+    clc
+    adc #1
+    and #$0f
+    sta actor_col,x
 ; 
 ;     # check sub-pixel location to see if we've reached a decision point
 ;     temp = check_midpoint(current)
@@ -443,20 +475,8 @@ move_player nop
     lda c
     sta actor_col,x
 
-; update pixel position
-    ldy r
-    lda player_row_to_y,y
-    clc
-    adc actor_ypixel,x
-    sta actor_y,x
-    ldy c
-    lda player_col_to_x,y
-    clc
-    adc actor_xpixel,x
-    sta actor_x,x
+?end rts
 
-?end
-    rts
 
 ; 
 ; 

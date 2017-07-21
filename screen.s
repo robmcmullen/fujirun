@@ -286,26 +286,27 @@ renderstart
     ldy #0
     sty damageindex
 
-    inc renderroundrobin_smc+1
+    ;inc renderroundrobin_smc+1
 
 renderroundrobin_smc
-    ldy #0
-    sty param_index
+    lda #0
+    sta param_index
 
 renderloop
     lda param_index
     and #actor_l - actor_active - 1
-    tay
-    lda actor_active,y
+    tax
+    lda actor_active,x
     beq renderskip      ; skip if zero
     bmi renderend ; end if negative
-    lda actor_l,y
+    jsr get_sprite
+    lda actor_l,x
     sta jsrsprite_smc+1
-    lda actor_h,y
+    lda actor_h,x
     sta jsrsprite_smc+2
-    lda actor_x,y
+    lda actor_x,x
     sta param_x
-    lda actor_y,y
+    lda actor_y,x
     sta param_y
     jmp jsrsprite_smc
 jsrsprite_smc
