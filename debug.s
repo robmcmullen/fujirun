@@ -130,4 +130,72 @@ debug_player nop
     ldy scratch_row
     jsr printhex
 
+    ; amidar 4
+    dec scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'4'
+    jsr fastfont
+    ldx #FIRST_AMIDAR+3
+    lda actor_col,x
+    ldx #35
+    ldy scratch_row
+    jsr printhex
+    ldx #FIRST_AMIDAR+3
+    lda actor_row,x
+    ldx #38
+    ldy scratch_row
+    jsr printhex
+
+    ; amidar 3
+    dec scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'3'
+    jsr fastfont
+    ldx #FIRST_AMIDAR+2
+    lda actor_col,x
+    ldx #35
+    ldy scratch_row
+    jsr printhex
+    ldx #FIRST_AMIDAR+2
+    lda actor_row,x
+    ldx #38
+    ldy scratch_row
+    jsr printhex
+
+    ; amidar 2
+    dec scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'2'
+    jsr fastfont
+    ldx #FIRST_AMIDAR+1
+    lda actor_col,x
+    ldx #35
+    ldy scratch_row
+    jsr printhex
+    ldx #FIRST_AMIDAR+1
+    lda actor_row,x
+    ldx #38
+    ldy scratch_row
+    jsr printhex
+
+    ; amidar 1 (orbiter)
+    dec scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'1'
+    jsr fastfont
+    ldx #FIRST_AMIDAR
+    lda actor_col,x
+    ldx #35
+    ldy scratch_row
+    jsr printhex
+    ldx #FIRST_AMIDAR
+    lda actor_row,x
+    ldx #38
+    ldy scratch_row
+    jsr printhex
+
     rts
