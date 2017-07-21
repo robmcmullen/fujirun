@@ -288,6 +288,7 @@ userinput
     ldx #38
     ldy #23
     jsr printhex
+    ldx #0
     pla
     bpl input_not_movement ; stop movement of player if no direction input
 
@@ -295,7 +296,6 @@ userinput
     ; down, which causes a pause after the initial movement. Not setting the
     ; strobe allows smooth movement from the start, but there's no way to stop
     ;sta KBDSTROBE
-    ldx #0
 
 check_up cmp #$8d  ; up arrow
     beq input_up
