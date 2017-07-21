@@ -51,6 +51,10 @@ debug_player nop
     lda #22
     sta scratch_row
 
+    ldx #34
+    ldy scratch_row
+    lda #'d'
+    jsr fastfont
     ldx #0
     lda actor_input_dir,x
     ldx #35
@@ -63,6 +67,10 @@ debug_player nop
     jsr printhex
 
     dec scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'x'
+    jsr fastfont
     ldx #0
     lda actor_x,x
     ldx #35
@@ -75,6 +83,10 @@ debug_player nop
     jsr printhex
 
     dec scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'c'
+    jsr fastfont
     ldx #0
     lda actor_col,x
     ldx #35
@@ -87,6 +99,10 @@ debug_player nop
     jsr printhex
 
     dec scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'t'
+    jsr fastfont
     ldx #0
     lda tdamageindex1
     ldx #35
@@ -99,6 +115,10 @@ debug_player nop
     jsr printhex
 
     dec scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'p'
+    jsr fastfont
     ldx #0
     lda debug_mark_box
     ldx #35
