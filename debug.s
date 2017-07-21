@@ -41,6 +41,12 @@ printstr ; X = column, Y = row, scratch_ptr is text (null terminated)
     bne ?next
 ?exit rts
 
+
+debug_damage .byte 0
+debug_paint_box .byte 0
+debug_mark_box .byte 0
+
+
 debug_player nop
     lda #22
     sta scratch_row
@@ -88,6 +94,18 @@ debug_player nop
     jsr printhex
     ldx #0
     lda tdamageindex2
+    ldx #38
+    ldy scratch_row
+    jsr printhex
+
+    dec scratch_row
+    ldx #0
+    lda debug_mark_box
+    ldx #35
+    ldy scratch_row
+    jsr printhex
+    ldx #0
+    lda debug_paint_box
     ldx #38
     ldy scratch_row
     jsr printhex

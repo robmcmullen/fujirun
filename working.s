@@ -93,6 +93,7 @@ r2 .ds 1
 c .ds 1
 c1 .ds 1
 c2 .ds 1
+size .ds 1
 dot .ds 1
 round_robin_index .ds 2
 level .ds 1
@@ -250,6 +251,7 @@ game_loop nop
 ;        show_screen()
 ?draw jsr restorebg_driver
     jsr restoretext
+    jsr paint_boxes
     jsr renderstart
     jsr pageflip
     jsr wait

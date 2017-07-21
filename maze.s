@@ -579,6 +579,7 @@ mark_box_for_painting nop
 ;            break
 ?1  lda box_painting,y
     bne ?skip
+    inc debug_mark_box
     lda c1
     sta box_painting,y
     iny

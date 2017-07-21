@@ -40,30 +40,118 @@ damage_maze nop
     rts
 
 
+
+
+;        if box_painting[x] == 0:
+;            box_painting[x] = c
+;            box_painting[x + 1] = r1
+;            box_painting[x + 2] = r2
+;            box_painting[x + 3] = zp.current_actor
+;            break
+    lda c1
+    sta box_painting,y
+    rts
+
+
+;        x += NUM_BOX_PAINTING_PARAMS
+;    pad.addstr(27, 0, "starting box, player @ %d %d,%d -> %d,%d" % (zp.current_actor, r1, c, r2, c + BOX_WIDTH))
+
+
+save_index .byte 0
+
 ; def paint_boxes():
+paint_boxes nop
 ;     x = 0
 ;     pad.addstr(28, 0, "Checking box:")
 ;     while x < NUM_BOX_PAINTING_PARAMS * 16:
-;         pad.addstr(29, x, "%d   " % x)
+    ldy #0
+    sty param_index
+?loop ldy param_index
+    cpy #MAX_BOX_PAINTING
+    bcc ?1
+    rts
+
 ;         if box_painting[x] > 0:
+?1  lda box_painting,y
+    beq ?skip
 ;             c1 = box_painting[x]
 ;             r1 = box_painting[x + 1]
 ;             r2 = box_painting[x + 2]
 ;             i = box_painting[x + 3]
+
+    inc debug_paint_box
+
+    sta c1
+    sty save_index
+    iny
+    lda box_painting,y
+    sta r1
+    iny
+    lda box_painting,y
+    sta r2
+    iny
+    lda box_painting,y ; player number
+    iny
+    sty param_index
 ;             box_log.debug("Painting box line, player %d at %d,%d" % (i, r1, c1))
 ;             pad.addstr(30, 0, "painting box line at %d,%d" % (r1, c1))
 ;             addr = screenrow(r1)
+    ldy r1
+    jsr mazerow
+    ldy c1
+    lda #$23 ; # sign
+    sta (mazeaddr),y
+    iny
+    sta (mazeaddr),y
+    iny
+    sta (mazeaddr),y
+    iny
+    sta (mazeaddr),y
+    iny
+    sta (mazeaddr),y
+
+    lda c1
+    sta c
+    lda r1
+    sta r
+    lda #5
+    sta size
+    jsr damage_string
 ;             for c in range(BOX_WIDTH):
 ;                 if i == 0:
 ;                     addr[c1 + c] = ord("X")
 ;                 else:
 ;                     addr[c1 + c] = ord(".")
 ;             r1 += 1
+    inc r1
 ;             print "ROW", r1
-;             box_painting[x + 1] = r1
 ;             if r1 >= r2:
 ;                 box_painting[x] = 0
+    lda r1
+    cmp r2
+    bcs ?finish
+
+;             box_painting[x + 1] = r1
+    ldy save_index
+    iny
+    sta box_painting,y
+    bne ?loop
+
+?finish ldy save_index
+    lda #0
+    sta box_painting,y
+    beq ?loop
+
+
+
 ;         x += NUM_BOX_PAINTING_PARAMS
+?skip iny
+    iny
+    iny
+    iny
+    sty param_index
+    bne ?loop ; always
+
 ; 
 ; def init_static_background():
 ;     zp.current_actor = 0

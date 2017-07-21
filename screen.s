@@ -370,6 +370,12 @@ renderend
 
 ; text position in r, c. add single char to both pages!
 damage_char nop
+    lda #1
+    sta size
+    ; fallthrough
+
+; text position in r, c; string length in size
+damage_string nop
     ldy tdamageindex1
     lda c
     sta TEXTDAMAGE,y
@@ -377,7 +383,7 @@ damage_char nop
     lda r
     sta TEXTDAMAGE,y
     iny
-    lda #1
+    lda size
     sta TEXTDAMAGE,y
     iny
     sty tdamageindex1
@@ -389,7 +395,7 @@ damage_char nop
     lda r
     sta TEXTDAMAGE,y
     iny
-    lda #1
+    lda size
     sta TEXTDAMAGE,y
     iny
     sty tdamageindex2
