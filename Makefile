@@ -1,16 +1,6 @@
-COLORSPRITE = moldy_burger.png
-BWSPRITE = apple-sprite9x11.png
+SPRITES = atari-sprite9x11.png apple-sprite9x11.png
 
-all: cpbg.dsk titles.dsk working.dsk
-
-cpbg-sprite-driver.s: $(BWSPRITE)
-	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o cpbg $(BWSPRITE) $(COLORSPRITE)
-
-cpbg.xex: cpbg.s cpbg-sprite-driver.s
-	atasm -mae -ocpbg.xex cpbg.s -Lcpbg.var -gcpbg.lst
-
-cpbg.dsk: cpbg.xex
-	atrcopy cpbg.dsk boot -b cpbg.xex --brun 6000 -f
+all: titles.dsk working.dsk
 
 player-missile.hgr: player-missile.png
 	quicksprite.py player-missile.png
@@ -41,8 +31,8 @@ titles.dsk: cpbg.xex player-missile.hgr partycrasher-software.hgr kansasfest-hac
 	#atrcopy titles.dsk boot -d kansasfest-hackfest.hgr@2000 player-missile.hgr@4000 partycrasher-software.hgr@2000 -b cpbg.xex --brun 6000 -f
 	atrcopy titles.dsk boot -d title.hgr@2000 -b cpbg.xex --brun 6000 -f
 
-working-sprite-driver.s: $(BWSPRITE) fatfont128.dat
-	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o working $(BWSPRITE)
+working-sprite-driver.s: $(SPRITES) fatfont128.dat
+	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o working $(SPRITES)
 
 working.xex: working.s rand.s maze.s working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s
 	rm -f working.xex
