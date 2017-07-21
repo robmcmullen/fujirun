@@ -312,19 +312,12 @@ restorebg_row_smc lda $ffff,x
 
 ; Draw sprites by looping through the list of sprites
 renderstart
-    ldy #0
-    sty damageindex
-
-    ;inc renderroundrobin_smc+1
-
-renderroundrobin_smc
     lda #0
+    sta damageindex
     sta param_index
 
 renderloop
-    lda param_index
-    and #actor_l - actor_active - 1
-    tax
+    ldx param_index
     lda actor_active,x
     beq renderskip      ; skip if zero
     bmi renderend ; end if negative
@@ -369,7 +362,6 @@ jsrsprite_smc
 
 renderskip
     inc param_index
-    dec param_count
     bne renderloop
 
 renderend
