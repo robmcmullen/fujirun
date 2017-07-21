@@ -25,6 +25,7 @@ param_col   .ds 1
 param_row   .ds 1
 param_index .ds 1
 param_count .ds 1
+param_save .ds 1
 
     *= $0010
 ; scratch areas: these may be modified by child subroutines
@@ -87,7 +88,12 @@ current .ds 1 ; current direction
 allowed .ds 1 ; allowed directions
 d .ds 1 ; actor input dir
 r .ds 1
+r1 .ds 1
+r2 .ds 1
 c .ds 1
+c1 .ds 1
+c2 .ds 1
+dot .ds 1
 round_robin_index .ds 2
 level .ds 1
 last_enemy .ds 1
@@ -125,11 +131,20 @@ start nop
     bit SETHIRES
 
     jsr clrscr
-    jsr init_screen_once
-    jsr init_actors_once
+    jsr init_once
     jsr title_screen
     jsr init_game
     jsr game_loop
+
+init_once
+    jsr init_screen_once
+    jsr init_actors_once
+    ldx #MAX_BOX_PAINTING
+    lda #0
+?1  sta box_painting - 1,x
+    dex
+    bne ?1
+    rts
 
 forever
     jmp forever

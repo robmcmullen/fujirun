@@ -20,8 +20,6 @@ actor_active .ds MAX_ACTORS ; 1 = active, 0 = skip, $ff = end
 actor_l .ds MAX_ACTORS
 actor_h .ds MAX_ACTORS
 
-dot_eaten_row  .ds 4 ; # dot eaten by player
-dot_eaten_col  .ds 4
 player_score  .ds 4
 player_next_target_score  .ds 4
 player_lives  .ds 4  ; # lives remaining
@@ -29,3 +27,5 @@ player_lives  .ds 4  ; # lives remaining
 amidar_start_col .ds VPATH_NUM
 round_robin_up  .ds VPATH_NUM
 round_robin_down  .ds VPATH_NUM
+
+box_painting .ds MAX_BOX_PAINTING

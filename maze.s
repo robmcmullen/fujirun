@@ -18,6 +18,10 @@ VPATH_NUM = 6
 BOX_WIDTH = 5
 VPATH_COL_SPACING = BOX_WIDTH + 1
 
+NUM_BOX_PAINTING_PARAMS = 4
+MAX_BOX_PAINTING = NUM_BOX_PAINTING_PARAMS * 16
+
+
 ; storage
 
 vpath_cols .byte 1, 7, 13, 19, 25, 31
@@ -425,15 +429,55 @@ finish_boxes nop
 
 
 ;def check_boxes():
+check_boxes nop
 ;    x = 0
+    ldy #0
+    sty param_index
+?loop ldy param_index
+    lda level_boxes,y
 ;    pad.addstr(28, 0, str(level_boxes[0:21]))
 ;    while level_boxes[x] < 0xff:
+    bpl ?1
+    rts
 ;        c = level_boxes[x]
 ;        if c > 0:
+?1  bne ?check
+    iny ; box is filled; don't check again
+    iny
+    iny
+    sty param_index
+    bne ?loop
+
+?check sta c1
+    sty param_save ; save index so we can mark the box as filled
 ;            r1 = level_boxes[x + 1]
+    iny
+    lda level_boxes,y
+    sta r1
+
+    iny
+    lda level_boxes,y
+    sta r2
+
+    iny
+    sty param_index
+
 ;            addr = mazerow(r1)
+    ldy r1
+    jsr mazerow
+    lda mazeaddr
+    sta scratch_addr
+    lda mazeaddr+1
+    sta scratch_addr+1 ; scratch_addr is top row
+
 ;            r1 += 1
+    iny
 ;            r1_save = r1
+    sty r1
+    sty r
+
+    ldy r2
+    jsr mazerow ; mazeaddr is bot row
 ;
 ;            # If there's a dot anywhere, then the box isn't painted. We don't
 ;            # care where it is so we don't need to keep track of individual
@@ -443,34 +487,116 @@ finish_boxes nop
 ;            r2 = level_boxes[x + 2]
 ;            addr = mazerow(r2)
 ;            dot |= addr[c]|addr[c + 1]|addr[c + 2]|addr[c + 3]|addr[c + 4]|addr[c + 5]|addr[c + BOX_WIDTH + 1]
-;
+    lda #0
+    sta dot
+
+    ; start checking top and bottom rows. 7 columns starting at c
+    ldy c1
+    ora (mazeaddr),y
+    ora (scratch_addr),y
+    iny
+    ora (mazeaddr),y
+    ora (scratch_addr),y
+    iny
+    ora (mazeaddr),y
+    ora (scratch_addr),y
+    iny
+    ora (mazeaddr),y
+    ora (scratch_addr),y
+    iny
+    ora (mazeaddr),y
+    ora (scratch_addr),y
+    iny
+    ora (mazeaddr),y
+    ora (scratch_addr),y
+    iny
+    ora (mazeaddr),y
+    ora (scratch_addr),y
+
+    and #TILE_DOT
+    bne ?loop ; a dot somewhere in there; skip this box!
+
+    sty c2
+
 ;            while r1 < r2:
 ;                addr = mazerow(r1)
 ;                dot |= addr[c]|addr[c + BOX_WIDTH + 1]
 ;                r1 += 1
-;
+?cols ldy r1
+    cpy r2
+    bcs ?paint
+
+    jsr mazerow
+    lda #0
+    ldy c1
+    ora (mazeaddr),y
+    ldy c2
+    ora (mazeaddr),y
+    and #TILE_DOT
+    bne ?loop ; a dot somewhere in there; skip this box!
+
+    inc r1
+    bne ?cols
+
 ;            if (dot & TILE_DOT) == 0:
 ;                # No dots anywhere! Start painting
 ;                mark_box_for_painting(r1_save, r2, c + 1)
+?paint ldy r
+    sty r1
+    inc c1
+    jsr mark_box_for_painting
+
+;                level_boxes[x] = 0  # Set flag so we don't check this box again
+    ldy param_save
+    lda #0
+    sta level_boxes,y
+
 ;                num_rows = r2 - r1_save
 ;                player_score[zp.current_actor] += num_rows * 100
-;                level_boxes[x] = 0  # Set flag so we don't check this box again
-;
-;        x += 3
-check_boxes nop
-    rts
+    lda r2
+    sec
+    sbc r
+    tay
+    lda box_score,y
+    jsr add_score
 
 
-;
+
 ;def mark_box_for_painting(r1, r2, c):
+mark_box_for_painting nop
 ;    box_log.debug("Marking box, player $%d @ %d,%d -> %d,%d" % (zp.current_actor, r1, c, r2, c + BOX_WIDTH))
 ;    x = 0
 ;    while x < NUM_BOX_PAINTING_PARAMS * 16:
+    ldy #0
+?loop cpy #MAX_BOX_PAINTING
+    bcc ?1
+    rts
 ;        if box_painting[x] == 0:
 ;            box_painting[x] = c
 ;            box_painting[x + 1] = r1
 ;            box_painting[x + 2] = r2
 ;            box_painting[x + 3] = zp.current_actor
 ;            break
+?1  lda box_painting,y
+    bne ?skip
+    lda c1
+    sta box_painting,y
+    iny
+    lda r1
+    sta box_painting,y
+    iny
+    lda r2
+    sta box_painting,y
+    iny
+    txa ; player number
+    sta box_painting,y
+    rts
+
+
 ;        x += NUM_BOX_PAINTING_PARAMS
 ;    pad.addstr(27, 0, "starting box, player @ %d %d,%d -> %d,%d" % (zp.current_actor, r1, c, r2, c + BOX_WIDTH))
+?skip iny
+    iny
+    iny
+    iny
+    bne ?loop ; always

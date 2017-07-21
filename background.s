@@ -18,10 +18,6 @@ check_dots nop
     sta c
     jsr has_dot
     beq ?1
-    lda r
-    sta dot_eaten_row,x
-    lda c
-    sta dot_eaten_col,x
 
     ldy r
     jsr mazerow
@@ -44,27 +40,6 @@ damage_maze nop
     rts
 
 
-; 
-; def update_background():
-;     zp.current_actor = 0
-;     while zp.current_actor < zp.num_players:
-;         if dot_eaten_col[zp.current_actor] < 128:
-;             # Here we update the screen; note the maze has already been updated
-;             # but we don't change the background until now so sprites can
-;             # restore their saved backgrounds first.
-; 
-;             r = dot_eaten_row[zp.current_actor]
-;             c = dot_eaten_col[zp.current_actor]
-;             addr = screenrow(r)
-;             addr[c] &= ~TILE_DOT
-; 
-;             # mark as completed
-;             dot_eaten_col[zp.current_actor] = 255
-;         update_score()
-;         zp.current_actor += 1
-; 
-;     paint_boxes()
-; 
 ; def paint_boxes():
 ;     x = 0
 ;     pad.addstr(28, 0, "Checking box:")

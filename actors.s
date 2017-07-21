@@ -87,6 +87,7 @@ GAME_OVER = 255
 ;
 DOT_SCORE = 1
 PAINT_SCORE_PER_LINE = 10
+box_score .byte 0, $10, $20, $30, $40, $50, $60, $70, $80, $90
 
 add_score nop
     sed
