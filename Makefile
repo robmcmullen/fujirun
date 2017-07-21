@@ -1,6 +1,16 @@
 SPRITES = atari-sprite9x11.png apple-sprite9x11.png
+CPSPRITES = apple-sprite9x11.png moldy_burger.png
 
-all: titles.dsk working.dsk
+all: cpbg.dsk titles.dsk working.dsk
+
+cpbg-sprite-driver.s: $(CPSPRITES)
+	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o cpbg $(CPSPRITES)
+
+cpbg.xex: cpbg.s cpbg-sprite-driver.s
+	atasm -mae -ocpbg.xex cpbg.s -Lcpbg.var -gcpbg.lst
+
+cpbg.dsk: cpbg.xex
+	atrcopy cpbg.dsk boot -b cpbg.xex --brun 6000 -f
 
 player-missile.hgr: player-missile.png
 	quicksprite.py player-missile.png
