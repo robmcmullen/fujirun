@@ -209,10 +209,10 @@ draw_to_page1 lda #$00
 
     ; copy addresses for functions that write to one page or the other
     lda #<FASTFONT_H1
-    sta fastfont+1
+    sta fastfont_smc+1
     sta copytexthgr_dest_smc+1
     lda #>FASTFONT_H1
-    sta fastfont+2
+    sta fastfont_smc+2
     sta copytexthgr_dest_smc+2
     rts
 
@@ -239,17 +239,27 @@ draw_to_page2 lda #$60
     sta damagestart
 
     lda #<FASTFONT_H2
-    sta fastfont+1
+    sta fastfont_smc+1
     sta copytexthgr_dest_smc+1
     lda #>FASTFONT_H2
-    sta fastfont+2
+    sta fastfont_smc+2
     sta copytexthgr_dest_smc+2
     rts
 
-; pageflip jump tables. JSR to one of these jumps and it will jump to the 
-; correct version for the page. The rts in there will return to the caller
 
-fastfont jmp $ffff
+; tile for middle left/right (number 12) is a color tile and gets
+; the wrong bit pattern when it's in an odd column -- replace the
+; image with tile 15 when necessary
+fastfont nop
+    cmp #12
+    bne fastfont_smc
+    txa
+    and #1
+    bne ?1
+    lda #15
+    bne fastfont_smc
+?1  lda #12
+fastfont_smc jmp $ffff
 
 
 
