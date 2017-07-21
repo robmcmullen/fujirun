@@ -269,6 +269,7 @@ init_amidar nop
     sta actor_status,x
     lda #TILE_DOWN
     jsr set_speed
+    rts
 
 
 ;def init_player():
