@@ -368,13 +368,16 @@ renderend
     rts
 
 
-; text position in r, c. add to both pages!
+; text position in r, c. add single char to both pages!
 damage_char nop
     ldy tdamageindex1
     lda c
     sta TEXTDAMAGE,y
     iny
     lda r
+    sta TEXTDAMAGE,y
+    iny
+    lda #1
     sta TEXTDAMAGE,y
     iny
     sty tdamageindex1
@@ -384,6 +387,9 @@ damage_char nop
     sta TEXTDAMAGE,y
     iny
     lda r
+    sta TEXTDAMAGE,y
+    iny
+    lda #1
     sta TEXTDAMAGE,y
     iny
     sty tdamageindex2
@@ -413,6 +419,9 @@ restoretext nop
     lda TEXTDAMAGE,y
     sta param_row
     iny
+    lda TEXTDAMAGE,y
+    sta param_count
+    iny
     sty param_index
 
     ldy param_row
@@ -423,6 +432,9 @@ restoretext nop
     ldx param_col
 ?row_smc lda $ffff,x
     jsr fastfont
-    jmp ?loop1
+    inx
+    dec param_count
+    bne ?row_smc
+    beq ?loop1
 
 
