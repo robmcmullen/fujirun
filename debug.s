@@ -80,4 +80,16 @@ debug_player nop
     ldy scratch_row
     jsr printhex
 
+    dec scratch_row
+    ldx #0
+    lda tdamageindex1
+    ldx #35
+    ldy scratch_row
+    jsr printhex
+    ldx #0
+    lda tdamageindex2
+    ldx #38
+    ldy scratch_row
+    jsr printhex
+
     rts

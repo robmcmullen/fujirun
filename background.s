@@ -40,6 +40,7 @@ check_dots nop
 
 ; update both screens!
 damage_maze nop
+    jsr damage_char
     rts
 
 

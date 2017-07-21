@@ -49,13 +49,19 @@ damage_h      .ds 1
 damageptr     .ds 2
 damageptr1    .ds 2
 damageptr2    .ds 2
-hgrhi         .ds 1    ; either $20 or $40, the base of each hgr screen
-hgrselect     .ds 1    ; either $00 or $60, used as xor mask for HGRROWS_H1
 
     *= $0030
+tdamageindex .ds 1
+tdamageindex1 .ds 1
+tdamageindex2 .ds 1
+damagestart .ds 1
+ 
+    *= $0040
 ; global variables for this program
 rendercount   .ds 1
 drawpage      .ds 1      ; pos = page1, neg = page2
+hgrhi         .ds 1    ; either $20 or $40, the base of each hgr screen
+hgrselect     .ds 1    ; either $00 or $60, used as xor mask for HGRROWS_H1
 tempaddr      .ds 2
 counter1      .ds 1
 textptr       .ds 2
@@ -63,7 +69,7 @@ hgrptr        .ds 2
 temprow       .ds 1
 tempcol       .ds 1
 
-    *= $0040
+    *= $0050
 mazeaddr    .ds 2
 next_level_box .ds 1
 box_row_save .ds 1
@@ -75,7 +81,7 @@ frame_count .ds 2
 countdown_time .ds 1
 still_alive .ds 1
 
-    *= $50
+    *= $0060
 current_actor .ds 1
 current .ds 1 ; current direction
 allowed .ds 1 ; allowed directions
@@ -91,11 +97,12 @@ last_enemy .ds 1
 ; BF00 - BFFF: damage for page 1
 ; BE00 - BEFF: damage for page 2
 ; BD00 - BDFF: level box storage
-
+; BC00 - BCFF: text damage
 ; constants
 
 DAMAGEPAGE1 = $bf   ; page number of damage list for screen 1
 DAMAGEPAGE2 = $be   ;   "" for screen 2
+TEXTDAMAGE = $bc00
 MAXPOSX     = 220
 MAXPOSY     = 192 - 16
 
@@ -227,6 +234,7 @@ game_loop nop
 ;        draw_actors()
 ;        show_screen()
 ?draw jsr restorebg_driver
+    jsr restoretext
     jsr renderstart
     jsr pageflip
     jsr wait

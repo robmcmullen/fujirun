@@ -14,6 +14,10 @@ init_screen_once nop
     sta damageptr1+1
     lda #damagepage2
     sta damageptr2+1
+    lda #0
+    sta tdamageindex1
+    lda #128
+    sta tdamageindex2
     jsr draw_to_page1
     rts
 
@@ -196,6 +200,13 @@ draw_to_page1 lda #$00
     lda damageindex1
     sta damageindex
 
+    lda tdamageindex   ; save other page's damage pointer
+    sta tdamageindex2
+    lda tdamageindex1 ; point to page 1's damage area
+    sta tdamageindex
+    lda #0
+    sta damagestart
+
     ; copy addresses for functions that write to one page or the other
     lda #<FASTFONT_H1
     sta fastfont+1
@@ -219,6 +230,14 @@ draw_to_page2 lda #$60
     sta damageptr+1
     lda damageindex2
     sta damageindex
+
+    lda tdamageindex   ; save other page's damage pointer
+    sta tdamageindex1
+    lda tdamageindex2 ; point to page 2's damage area
+    sta tdamageindex
+    lda #128
+    sta damagestart
+
     lda #<FASTFONT_H2
     sta fastfont+1
     sta copytexthgr_dest_smc+1
@@ -347,7 +366,61 @@ renderend
     rts
 
 
-damage_text nop
+; text position in r, c. add to both pages!
+damage_char nop
+    ldy tdamageindex1
+    lda c
+    sta TEXTDAMAGE,y
+    iny
+    lda r
+    sta TEXTDAMAGE,y
+    iny
+    sty tdamageindex1
+
+    ldy tdamageindex2
+    lda c
+    sta TEXTDAMAGE,y
+    iny
+    lda r
+    sta TEXTDAMAGE,y
+    iny
+    sty tdamageindex2
+
+    lda damagestart
+    bmi ?2
+    lda tdamageindex1
+    sta tdamageindex
     rts
+?2  lda tdamageindex2
+    sta tdamageindex
+    rts
+
+
+restoretext nop
+    ldy damagestart
+    sty param_index
+?loop1 ldy param_index
+    cpy tdamageindex
+    bcc ?cont  ; possible there's no damage, so have to check first
+    lda damagestart
+    sta tdamageindex  ; clear damage index for this page
+    rts
+?cont lda TEXTDAMAGE,y ; groups of 4 x1 -> x2, y1 -> y2
+    sta param_col
+    iny
+    lda TEXTDAMAGE,y
+    sta param_row
+    iny
+    sty param_index
+
+    ldy param_row
+    lda textrows_h,y
+    sta ?row_smc+2
+    lda textrows_l,y
+    sta ?row_smc+1
+    ldx param_col
+?row_smc lda $ffff,x
+    jsr fastfont
+    jmp ?loop1
 
 
