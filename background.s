@@ -99,15 +99,19 @@ paint_boxes nop
     ldy r1
     jsr mazerow
     ldy c1
+    lda #$24 ; $ sign
+    sta (mazeaddr),y
+    iny
     lda #$23 ; # sign
     sta (mazeaddr),y
     iny
+    lda #$24 ; $ sign
     sta (mazeaddr),y
     iny
+    lda #$23 ; # sign
     sta (mazeaddr),y
     iny
-    sta (mazeaddr),y
-    iny
+    lda #$24 ; $ sign
     sta (mazeaddr),y
 
     lda c1
