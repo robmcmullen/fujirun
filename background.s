@@ -248,7 +248,7 @@ update_score nop
     sta c
     lda player_score_row,x
     sta r
-    lda #4
+    lda #6
     sta size
     jsr damage_string
 
@@ -258,10 +258,10 @@ print_score nop
     ldy #MAZE_SCORE_COL
     lda player_score_h,x
     jsr print_hex
+    lda player_score_m,x
+    jsr print_hex
     lda player_score_l,x
     jsr print_hex
-    lda #'0'
-    sta (mazeaddr),y
     rts
 ;     row = player_score_row[zp.current_actor]
 ;     if actor_status[zp.current_actor] == GAME_OVER:

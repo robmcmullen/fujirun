@@ -54,7 +54,7 @@ SCREEN_ROWS = 24
 MAZE_LEFT_COL = 1
 MAZE_RIGHT_COL = 31
 MAZE_PANEL_COL = 33
-MAZE_SCORE_COL = 35
+MAZE_SCORE_COL = 34
 SCREEN_COLS = 40
 
 ;# Orbiter goes around the outside border, but not through the maze

@@ -4,6 +4,7 @@ level_speed_h .byte 2, 2, 2, 2, 2, 2
 ;level_speed_h .byte 0, 0, 0, 0, 0, 0
 player_score_row .byte 2, 7, 12, 17
 player_score_l .byte 0, 0, 0, 0
+player_score_m .byte 0, 0, 0, 0
 player_score_h .byte 0, 0, 0, 0
 
 
@@ -111,15 +112,17 @@ GAME_OVER = 255
 ;
 ;# Scores
 ;
-DOT_SCORE = 1
-PAINT_SCORE_PER_LINE = 10
-box_score .byte 0, $10, $20, $30, $40, $50, $60, $70, $80, $90
+DOT_SCORE = $05
+box_score .byte 0, $40, $80, $120, $160, $200, $240
 
 add_score nop
     sed
     clc
     adc player_score_l,x
     sta player_score_l,x
+    lda player_score_m,x
+    adc #0
+    sta player_score_m,x
     lda player_score_h,x
     adc #0
     sta player_score_h,x
