@@ -594,6 +594,7 @@ decide_direction nop
 ;     current = actor_dir[zp.current_actor]
     lda actor_dir,x
     sta current
+    sta last_dir
 ;     r = actor_row[zp.current_actor]
 ;     c = actor_col[zp.current_actor]
     lda actor_row,x
@@ -765,8 +766,26 @@ decide_direction nop
     sta actor_updown,x
     lda current
     sta actor_dir,x
-    jsr set_speed
-    rts
+
+    cmp last_dir
+    beq ?speed
+
+    ; different directions; reset subpixel
+    lda current
+    and #TILE_VERT
+    bne ?lr
+    lda #Y_MIDPOINT
+    sta actor_ypixel,x
+    lda #0
+    sta actor_yfrac,x
+    jmp set_speed
+
+?lr lda #X_MIDPOINT
+    sta actor_xpixel,x
+    lda #0
+    sta actor_xfrac,x
+
+?speed jmp set_speed
 
 
 

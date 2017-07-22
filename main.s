@@ -86,6 +86,7 @@ still_alive .ds 1
     *= $0060
 current_actor .ds 1
 current .ds 1 ; current direction
+last_dir .ds 1
 allowed .ds 1 ; allowed directions
 allowed_horz .ds 1
 allowed_vert .ds 1
