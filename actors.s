@@ -3,6 +3,7 @@ level_speed_l .byte 255, 200, 210, 220, 230, 240 ;# increment of fractional pixe
 level_speed_h .byte 2, 2, 2, 2, 2, 2
 ;level_speed_h .byte 0, 0, 0, 0, 0, 0
 player_score_row .byte 2, 7, 12, 17
+player_lives_row .byte 3, 8, 13, 18
 player_score_l .byte 0, 0, 0, 0
 player_score_m .byte 0, 0, 0, 0
 player_score_h .byte 0, 0, 0, 0
@@ -112,8 +113,8 @@ GAME_OVER = 255
 ;
 ;# Scores
 ;
-DOT_SCORE = $05
-box_score .byte 0, $40, $80, $120, $160, $200, $240
+DOT_SCORE = $01
+box_score .byte 0, $20, $40, $60, $80, $100, $120
 
 add_score nop
     sed

@@ -200,9 +200,11 @@ init_panel nop
     bne ?3
 ?4
     ldx #0
-    jsr update_score
+    jsr print_score
+    jsr print_lives
     inx
-    jsr update_score
+    jsr print_score
+    jsr print_lives
     rts
 
 player1_text .byte "PLAYER1", 0
@@ -221,6 +223,39 @@ player2_text .byte "PLAYER2", 0
 ;             c = " "
 ;         pad.addch(row, col, ord(c))
 ;         i += 1
+update_lives nop
+    lda #MAZE_SCORE_COL
+    sta c
+    lda player_lives_row,x
+    sta r
+    lda #6
+    sta size
+    jsr damage_string
+
+print_lives nop
+    ldy player_lives_row,x
+    jsr mazerow
+    lda player_lives,x
+    cmp #6
+    bcc ?ok
+    lda #6
+?ok sta scratch_col
+    lda #40
+    sec
+    sbc scratch_col
+    sta scratch_col
+    ldy #MAZE_SCORE_COL
+?loop cpy scratch_col
+    bcc ?blank
+    lda #'*'
+    bne ?show
+?blank lda #0
+?show sta (mazeaddr),y
+    iny
+    cpy #40
+    bcc ?loop
+    rts
+
 
 print_hex pha
     stx param_x
@@ -233,6 +268,15 @@ print_hex pha
     sta (mazeaddr),y
     iny
     pla
+    and #$0f
+    tax
+    lda hexdigit,x
+    sta (mazeaddr),y
+    iny
+    ldx param_x
+    rts
+
+print_low_nibble stx param_x
     and #$0f
     tax
     lda hexdigit,x
@@ -257,7 +301,7 @@ print_score nop
     jsr mazerow
     ldy #MAZE_SCORE_COL
     lda player_score_h,x
-    jsr print_hex
+    jsr print_low_nibble
     lda player_score_m,x
     jsr print_hex
     lda player_score_l,x
