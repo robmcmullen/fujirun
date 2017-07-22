@@ -86,6 +86,9 @@ textrows_h .byte $04, $04, $05, $05, $06, $06, $07, $07
         .byte $04, $04, $05, $05, $06, $06, $07, $07
 
 
+WIPE_DELAY = 40
+
+
 wipeclear1 ldy #0
     sty param_y
 wipeclear1_loop lda HGRROWS_L,y
@@ -97,7 +100,7 @@ wipeclear1_loop lda HGRROWS_L,y
 wipeclear1_save_smc sta $ffff,x
     dex
     bpl wipeclear1_save_smc
-    ldx #0
+    ldx #WIPE_DELAY
 wipeclear1_wait nop
     nop
     nop
@@ -126,7 +129,7 @@ wipe2to1_load_smc lda $ffff,x
 wipe2to1_save_smc sta $ffff,x
     dex
     bpl wipe2to1_load_smc
-    ldx #0
+    ldx #WIPE_DELAY
 wipe2to1_wait nop
     nop
     nop
