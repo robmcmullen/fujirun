@@ -318,6 +318,7 @@ renderstart
 
 renderloop
     ldx param_index
+    jsr evaluate_status
     lda actor_active,x
     beq renderskip      ; skip if zero
     bmi renderend ; end if negative

@@ -1,5 +1,5 @@
-EXPLODING_TIME = 50
-DEAD_TIME = 40
+EXPLODING_TIME = 10
+DEAD_TIME = 10
 REGENERATING_TIME = 60
 END_GAME_TIME = 100
 TITLE_SCREEN_TIME = 100
@@ -52,9 +52,57 @@ TITLE_SCREEN_TIME = 100
 ;         c = None
 ;     zp.sprite_addr = c
 
+evaluate_status nop
+; update pixel position
+    lda actor_status,x
+    cmp #PLAYER_EXPLODING
+    bne ?dead
+
+    lda #0
+    sta actor_active,x
+    dec actor_frame_counter,x
+    bne ?end
+    lda #PLAYER_DEAD
+    sta actor_status,x
+    lda #DEAD_TIME
+    sta actor_frame_counter,x
+    dec player_lives,x
+    jmp update_lives
+
+?dead cmp #PLAYER_DEAD
+    bne ?regenerating
+    dec actor_frame_counter,x
+    bne ?end
+
+    lda player_lives,x
+    beq ?game_over
+
+    jsr next_life
+    lda #PLAYER_REGENERATING
+    sta actor_status,x
+    lda #REGENERATING_TIME
+    sta actor_frame_counter,x
+    rts
+
+?regenerating cmp #PLAYER_REGENERATING
+    bne ?end
+    dec actor_frame_counter,x
+    beq ?alive
+
+    lda actor_frame_counter,x
+    and #1
+    sta actor_active,x
+    rts
+
+?game_over nop
+    rts
+
+?alive lda #1
+    sta actor_active,x
+?end rts
+
 
 get_sprite nop
-; update pixel position
     lda actor_row,x
     tay
     lda player_row_to_y,y
@@ -71,6 +119,8 @@ get_sprite nop
 ?end
     rts
 
+?game_over
+    rts
 
 ; 
 ; 

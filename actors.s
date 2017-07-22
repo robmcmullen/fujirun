@@ -1,4 +1,4 @@
-level_enemies .byte 55, 2, 5, 6, 7, 8 ;# level starts counting from 1, so dummy zeroth level info
+level_enemies .byte 55, 4, 5, 6, 7, 8 ;# level starts counting from 1, so dummy zeroth level info
 level_speed_l .byte 255, 200, 210, 220, 230, 240 ;# increment of fractional pixel per game frame
 level_speed_h .byte 2, 2, 2, 2, 2, 2
 ;level_speed_h .byte 0, 0, 0, 0, 0, 0
@@ -202,7 +202,7 @@ init_level nop
 ;    actor_input_dir[zp.current_actor] = 0
 
 ; actor in X
-init_actor nop
+init_common nop
     lda #MAZE_LEFT_COL
     sta actor_col,x
     lda #3
@@ -216,17 +216,23 @@ init_actor nop
     sta actor_yspeed_l,x
     sta actor_yspeed_h,x
     sta actor_input_dir,x
-    sta actor_frame_counter,x
-    sta actor_target_col,x
-    sta actor_input_dir,x
     sta actor_turn_zone,x
     lda #MAZE_BOT_ROW
     sta actor_row,x
     lda #TILE_UP
     sta actor_updown,x
     sta actor_dir,x
+    rts
+
+init_actor nop
+    jsr init_common
+    lda #0
+    sta actor_frame_counter,x
+    sta actor_target_col,x
     lda #NOT_VISIBLE
     sta actor_status,x
+    lda #1
+    sta actor_active,x
     rts
 
 
@@ -295,8 +301,7 @@ init_amidar nop
 ;    actor_col[zp.current_actor] = addr[zp.current_actor]
 ;    actor_row[zp.current_actor] = MAZE_BOT_ROW
 ;    actor_status[zp.current_actor] = PLAYER_ALIVE
-init_player nop
-    jsr init_actor
+init_player_common 
     lda config_num_players  ; 4 players max, 
     asl a
     asl a
@@ -307,6 +312,11 @@ init_player nop
     sta actor_col,x
     lda #MAZE_BOT_ROW
     sta actor_row,x
+    rts
+
+init_player nop
+    jsr init_actor
+    jsr init_player_common
     lda #PLAYER_ALIVE
     sta actor_status,x
 ;                player_lives[zp.current_actor] = STARTING_LIVES
@@ -320,6 +330,9 @@ init_player nop
     sta player_score_h
     rts
 
+next_life jsr init_common
+    jsr init_player_common
+    rts
 
 ;def init_actors():
 init_actors nop

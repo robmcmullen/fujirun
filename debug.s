@@ -54,52 +54,52 @@ debug_player nop
     lda #22
     sta scratch_row
 
-    ldx #34
-    ldy scratch_row
-    lda #'d'
-    jsr fastfont
-    ldx #0
-    lda actor_input_dir,x
-    ldx #35
-    ldy scratch_row
-    jsr debughex
-    ldx #0
-    lda actor_dir,x
-    ldx #38
-    ldy scratch_row
-    jsr debughex
-
-    dec scratch_row
-    ldx #34
-    ldy scratch_row
-    lda #'x'
-    jsr fastfont
-    ldx #0
-    lda actor_x,x
-    ldx #35
-    ldy scratch_row
-    jsr debughex
-    ldx #0
-    lda actor_y,x
-    ldx #38
-    ldy scratch_row
-    jsr debughex
-
-    dec scratch_row
-    ldx #34
-    ldy scratch_row
-    lda #'c'
-    jsr fastfont
-    ldx #0
-    lda actor_col,x
-    ldx #35
-    ldy scratch_row
-    jsr debughex
-    ldx #0
-    lda actor_row,x
-    ldx #38
-    ldy scratch_row
-    jsr debughex
+;    ldx #34
+;    ldy scratch_row
+;    lda #'d'
+;    jsr fastfont
+;    ldx #0
+;    lda actor_input_dir,x
+;    ldx #35
+;    ldy scratch_row
+;    jsr debughex
+;    ldx #0
+;    lda actor_dir,x
+;    ldx #38
+;    ldy scratch_row
+;    jsr debughex
+;
+;    dec scratch_row
+;    ldx #34
+;    ldy scratch_row
+;    lda #'x'
+;    jsr fastfont
+;    ldx #0
+;    lda actor_x,x
+;    ldx #35
+;    ldy scratch_row
+;    jsr debughex
+;    ldx #0
+;    lda actor_y,x
+;    ldx #38
+;    ldy scratch_row
+;    jsr debughex
+;
+;    dec scratch_row
+;    ldx #34
+;    ldy scratch_row
+;    lda #'c'
+;    jsr fastfont
+;    ldx #0
+;    lda actor_col,x
+;    ldx #35
+;    ldy scratch_row
+;    jsr debughex
+;    ldx #0
+;    lda actor_row,x
+;    ldx #38
+;    ldy scratch_row
+;    jsr debughex
 
     dec scratch_row
     ldx #34
@@ -112,7 +112,23 @@ debug_player nop
     ldy scratch_row
     jsr debughex
     ldx #0
-    lda actor_turn_zone,x
+    lda actor_active,x
+    ldx #38
+    ldy scratch_row
+    jsr debughex
+
+    dec scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'t'
+    jsr fastfont
+    ldx #0
+    lda actor_frame_counter,x
+    ldx #35
+    ldy scratch_row
+    jsr debughex
+    ldx #0
+    lda actor_active,x
     ldx #38
     ldy scratch_row
     jsr debughex
@@ -149,108 +165,108 @@ debug_player nop
 ;    ldy scratch_row
 ;    jsr debughex
 
-    ; amidar 4
-    dec scratch_row
-    ldx #34
-    ldy scratch_row
-    lda #'4'
-    jsr fastfont
-    ldx #FIRST_AMIDAR+3
-    lda actor_col,x
-    ldx #35
-    ldy scratch_row
-    jsr debughex
-    ldx #FIRST_AMIDAR+3
-    lda actor_row,x
-    ldx #38
-    ldy scratch_row
-    jsr debughex
-
-    ; amidar 3
-    dec scratch_row
-    ldx #34
-    ldy scratch_row
-    lda #'3'
-    jsr fastfont
-    ldx #FIRST_AMIDAR+2
-    lda actor_col,x
-    ldx #35
-    ldy scratch_row
-    jsr debughex
-    ldx #FIRST_AMIDAR+2
-    lda actor_row,x
-    ldx #38
-    ldy scratch_row
-    jsr debughex
-
-    ; amidar 2
-    dec scratch_row
-    ldx #FIRST_AMIDAR+1
-    lda actor_xpixel,x
-    ldx #35
-    ldy scratch_row
-    jsr debughex
-    ldx #FIRST_AMIDAR+1
-    lda actor_ypixel,x
-    ldx #38
-    ldy scratch_row
-    jsr debughex
-
-    dec scratch_row
-    ldx #34
-    ldy scratch_row
-    lda #'2'
-    jsr fastfont
-    ldx #FIRST_AMIDAR+1
-    lda actor_col,x
-    ldx #35
-    ldy scratch_row
-    jsr debughex
-    ldx #FIRST_AMIDAR+1
-    lda actor_row,x
-    ldx #38
-    ldy scratch_row
-    jsr debughex
-
-    ; amidar 1 (orbiter)
-    dec scratch_row
-    ldx #FIRST_AMIDAR
-    lda actor_xpixel,x
-    ldx #35
-    ldy scratch_row
-    jsr debughex
-    ldx #FIRST_AMIDAR
-    lda actor_ypixel,x
-    ldx #38
-    ldy scratch_row
-    jsr debughex
-
-    dec scratch_row
-    ldx #FIRST_AMIDAR
-    lda actor_xfrac,x
-    ldx #35
-    ldy scratch_row
-    jsr debughex
-    ldx #FIRST_AMIDAR
-    lda actor_yfrac,x
-    ldx #38
-    ldy scratch_row
-    jsr debughex
-
-    dec scratch_row
-    ldx #34
-    ldy scratch_row
-    lda #'1'
-    jsr fastfont
-    ldx #FIRST_AMIDAR
-    lda actor_col,x
-    ldx #35
-    ldy scratch_row
-    jsr debughex
-    ldx #FIRST_AMIDAR
-    lda actor_row,x
-    ldx #38
-    ldy scratch_row
-    jsr debughex
+;    ; amidar 4
+;    dec scratch_row
+;    ldx #34
+;    ldy scratch_row
+;    lda #'4'
+;    jsr fastfont
+;    ldx #FIRST_AMIDAR+3
+;    lda actor_col,x
+;    ldx #35
+;    ldy scratch_row
+;    jsr debughex
+;    ldx #FIRST_AMIDAR+3
+;    lda actor_row,x
+;    ldx #38
+;    ldy scratch_row
+;    jsr debughex
+;
+;    ; amidar 3
+;    dec scratch_row
+;    ldx #34
+;    ldy scratch_row
+;    lda #'3'
+;    jsr fastfont
+;    ldx #FIRST_AMIDAR+2
+;    lda actor_col,x
+;    ldx #35
+;    ldy scratch_row
+;    jsr debughex
+;    ldx #FIRST_AMIDAR+2
+;    lda actor_row,x
+;    ldx #38
+;    ldy scratch_row
+;    jsr debughex
+;
+;    ; amidar 2
+;    dec scratch_row
+;    ldx #FIRST_AMIDAR+1
+;    lda actor_xpixel,x
+;    ldx #35
+;    ldy scratch_row
+;    jsr debughex
+;    ldx #FIRST_AMIDAR+1
+;    lda actor_ypixel,x
+;    ldx #38
+;    ldy scratch_row
+;    jsr debughex
+;
+;    dec scratch_row
+;    ldx #34
+;    ldy scratch_row
+;    lda #'2'
+;    jsr fastfont
+;    ldx #FIRST_AMIDAR+1
+;    lda actor_col,x
+;    ldx #35
+;    ldy scratch_row
+;    jsr debughex
+;    ldx #FIRST_AMIDAR+1
+;    lda actor_row,x
+;    ldx #38
+;    ldy scratch_row
+;    jsr debughex
+;
+;    ; amidar 1 (orbiter)
+;    dec scratch_row
+;    ldx #FIRST_AMIDAR
+;    lda actor_xpixel,x
+;    ldx #35
+;    ldy scratch_row
+;    jsr debughex
+;    ldx #FIRST_AMIDAR
+;    lda actor_ypixel,x
+;    ldx #38
+;    ldy scratch_row
+;    jsr debughex
+;
+;    dec scratch_row
+;    ldx #FIRST_AMIDAR
+;    lda actor_xfrac,x
+;    ldx #35
+;    ldy scratch_row
+;    jsr debughex
+;    ldx #FIRST_AMIDAR
+;    lda actor_yfrac,x
+;    ldx #38
+;    ldy scratch_row
+;    jsr debughex
+;
+;    dec scratch_row
+;    ldx #34
+;    ldy scratch_row
+;    lda #'1'
+;    jsr fastfont
+;    ldx #FIRST_AMIDAR
+;    lda actor_col,x
+;    ldx #35
+;    ldy scratch_row
+;    jsr debughex
+;    ldx #FIRST_AMIDAR
+;    lda actor_row,x
+;    ldx #38
+;    ldy scratch_row
+;    jsr debughex
 
     rts
