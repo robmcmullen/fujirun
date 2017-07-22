@@ -104,34 +104,50 @@ debug_player nop
     dec scratch_row
     ldx #34
     ldy scratch_row
-    lda #'t'
+    lda #'s'
     jsr fastfont
     ldx #0
-    lda tdamageindex1
+    lda actor_status,x
     ldx #35
     ldy scratch_row
     jsr debughex
     ldx #0
-    lda tdamageindex2
+    lda actor_row,x
     ldx #38
     ldy scratch_row
-    jsr debughex
+    ;jsr debughex
 
-    dec scratch_row
-    ldx #34
-    ldy scratch_row
-    lda #'p'
-    jsr fastfont
-    ldx #0
-    lda debug_mark_box
-    ldx #35
-    ldy scratch_row
-    jsr debughex
-    ldx #0
-    lda debug_paint_box
-    ldx #38
-    ldy scratch_row
-    jsr debughex
+;    dec scratch_row
+;    ldx #34
+;    ldy scratch_row
+;    lda #'t'
+;    jsr fastfont
+;    ldx #0
+;    lda tdamageindex1
+;    ldx #35
+;    ldy scratch_row
+;    jsr debughex
+;    ldx #0
+;    lda tdamageindex2
+;    ldx #38
+;    ldy scratch_row
+;    jsr debughex
+;
+;    dec scratch_row
+;    ldx #34
+;    ldy scratch_row
+;    lda #'p'
+;    jsr fastfont
+;    ldx #0
+;    lda debug_mark_box
+;    ldx #35
+;    ldy scratch_row
+;    jsr debughex
+;    ldx #0
+;    lda debug_paint_box
+;    ldx #38
+;    ldy scratch_row
+;    jsr debughex
 
     ; amidar 4
     dec scratch_row

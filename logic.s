@@ -870,10 +870,10 @@ check_collisions nop
     bmi end_collisions ; negative = end
     beq ?enemy ; zero = skip
     lda actor_row,y
-    cpy r
-    beq start_exploding
+    cmp r
+    bne ?enemy
     lda actor_col,y
-    cpy c
+    cmp c
     bne ?enemy
 
 ; def start_exploding():

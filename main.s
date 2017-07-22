@@ -262,7 +262,7 @@ game_loop nop
     jsr paint_boxes
     jsr renderstart
     jsr pageflip
-    ;jsr debug_player
+    jsr debug_player
     ;jsr wait
     jmp game_loop
 
