@@ -308,7 +308,8 @@ init_player_common
     clc
     adc current_actor
     tay
-    lda player_start_col,y
+    ;lda player_start_col,y
+    lda #16
     sta actor_col,x
     lda #MAZE_BOT_ROW
     sta actor_row,x

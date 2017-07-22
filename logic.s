@@ -1,6 +1,6 @@
 EXPLODING_TIME = 10
 DEAD_TIME = 10
-REGENERATING_TIME = 60
+REGENERATING_TIME = 120
 END_GAME_TIME = 100
 TITLE_SCREEN_TIME = 100
 
@@ -78,6 +78,7 @@ evaluate_status nop
     beq ?game_over
 
     jsr next_life
+    sta KBDSTROBE
     lda #PLAYER_REGENERATING
     sta actor_status,x
     lda #REGENERATING_TIME
@@ -86,6 +87,8 @@ evaluate_status nop
 
 ?regenerating cmp #PLAYER_REGENERATING
     bne ?end
+    lda actor_input_dir,x
+    bne ?alive
     dec actor_frame_counter,x
     beq ?alive
 
@@ -99,6 +102,8 @@ evaluate_status nop
 
 ?alive lda #1
     sta actor_active,x
+    lda #PLAYER_ALIVE
+    sta actor_status,x
 ?end rts
 
 
