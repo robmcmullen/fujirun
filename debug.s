@@ -166,6 +166,18 @@ debug_player nop
 
     ; amidar 2
     dec scratch_row
+    ldx #FIRST_AMIDAR+1
+    lda actor_xpixel,x
+    ldx #35
+    ldy scratch_row
+    jsr printhex
+    ldx #FIRST_AMIDAR+1
+    lda actor_ypixel,x
+    ldx #38
+    ldy scratch_row
+    jsr printhex
+
+    dec scratch_row
     ldx #34
     ldy scratch_row
     lda #'2'
@@ -182,6 +194,18 @@ debug_player nop
     jsr printhex
 
     ; amidar 1 (orbiter)
+    dec scratch_row
+    ldx #FIRST_AMIDAR
+    lda actor_xpixel,x
+    ldx #35
+    ldy scratch_row
+    jsr printhex
+    ldx #FIRST_AMIDAR
+    lda actor_ypixel,x
+    ldx #38
+    ldy scratch_row
+    jsr printhex
+
     dec scratch_row
     ldx #34
     ldy scratch_row

@@ -230,7 +230,9 @@ init_orbiter nop
     lda #ORBITER_START_ROW
     sta actor_row,x
     lda #TILE_UP
+    sta actor_updown,x
     sta actor_dir,x
+    jsr set_speed
     lda #ORBITER_NORMAL
     sta actor_status,x
     rts
@@ -265,10 +267,9 @@ init_amidar nop
     lda #TILE_DOWN
     sta actor_updown,x
     sta actor_dir,x
+    jsr set_speed
     lda #AMIDAR_NORMAL
     sta actor_status,x
-    lda #TILE_DOWN
-    jsr set_speed
     rts
 
 

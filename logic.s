@@ -275,8 +275,8 @@ move_enemy nop
 ;         actor_row[zp.current_actor] += 1
 ;         actor_ypixel[zp.current_actor] -= Y_TILEMAX
 ?down lda actor_ypixel,x
-    cmp #X_TILEMAX
-    bcc ?ret
+    cmp #Y_TILEMAX
+    bcc ?mid
     inc actor_row,x
     lda actor_ypixel,x
     sec
@@ -298,8 +298,8 @@ move_enemy nop
 ;                 decide_orbiter()
 ;             else:
 ;                 decide_direction()
-    lda actor_status,x
-    cmp #ORBITER_NORMAL
+    lda actor_type,x
+    cmp #ORBITER_TYPE
     bne ?dir
     jmp decide_orbiter
 ?dir jmp decide_direction
