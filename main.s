@@ -204,6 +204,7 @@ initbackground nop
     jsr show_page1
     jsr init_maze
     jsr init_panel
+    jsr titlepage
     jsr copytexthgr  ; page2 becomes the source
     jsr titlewipe
     jsr copy2to1

@@ -44,7 +44,7 @@ titles.dsk: cpbg.xex player-missile.hgr partycrasher-software.hgr kansasfest-hac
 working-sprite-driver.s: $(SPRITES) fatfont128.dat
 	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o working $(SPRITES)
 
-working.xex: working.s main.s rand.s maze.s working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s
+working.xex: working.s wipes-null.s main.s rand.s maze.s working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s
 	rm -f working.xex
 	atasm -mae -oworking.xex working.s -Lworking.var -gworking.lst
 
@@ -53,12 +53,12 @@ working.dsk: working.xex
 	atrcopy working.dsk boot -b working.xex --brun 6000 -f
 	cp working.var /home/rob/.wine/drive_c/applewin/APPLE2E.SYM
 
-demo.xex: demo.s main.s rand.s maze.s working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s
+demo.xex: demo.s wipes-demo.s main.s rand.s maze.s working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s
 	rm -f demo.xex
 	atasm -mae -odemo.xex demo.s -Ldemo.var -gdemo.lst
 
 demo.dsk: demo.xex logic.s player-missile.hgr partycrasher-software.hgr kansasfest-hackfest.hgr title.hgr
-	atrcopy demo.dsk boot -d kansasfest-hackfest.hgr@2000 player-missile.hgr@4000 partycrasher-software.hgr@2000 -b demo.xex --brun 6000 -f
+	atrcopy demo.dsk boot -d partycrasher-software.hgr@2000 player-missile.hgr@4000 kansasfest-hackfest.hgr@2000 title.hgr@4001 -b demo.xex --brun 6000 -f
 
 clean:
 	rm -f cpbg.dsk cpbg.xex cpbg.var cpbg.lst cpbg-sprite-driver.s cpbg-bwsprite.s cpbg-hgrcols-7x1.s cpbg-hgrrows.s cpbg-apple_sprite9x11.s cpbg-fastfont.s cpbg-moldy_burger.s
