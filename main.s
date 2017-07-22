@@ -87,6 +87,9 @@ still_alive .ds 1
 current_actor .ds 1
 current .ds 1 ; current direction
 allowed .ds 1 ; allowed directions
+allowed_horz .ds 1
+allowed_vert .ds 1
+updown .ds 1 ; up or down for amidar
 d .ds 1 ; actor input dir
 r .ds 1
 r1 .ds 1
@@ -96,13 +99,13 @@ c1 .ds 1
 c2 .ds 1
 size .ds 1
 dot .ds 1
-round_robin_index .ds 2
-level .ds 1
-last_enemy .ds 1
 
     * = $0070
 before .ds 1
 crossed .ds 1
+round_robin_index .ds 2
+level .ds 1
+last_enemy .ds 1
 
 
 ; memory map

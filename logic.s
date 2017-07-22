@@ -150,31 +150,75 @@ get_next_tile nop
 ; 
 ; # Choose a target column for the next up/down direction at a bottom or top T
 ; def get_next_round_robin(rr_table, x):
+get_next_round_robin nop
+    lda round_robin_index,y
+    pha
+    tay
+    iny
+    cpy #VPATH_NUM
+    bcc ?ok
+    ldy #0
+?ok  tya
+    sta round_robin_index,y
 ;     target_col = rr_table[zp.round_robin_index[x]]
+    pla
+    tay
+    lda (scratch_ptr),y
 ;     logic_log.debug("target: %d, indexes=%s, table=%s" % (target_col, str(zp.round_robin_index), rr_table))
 ;     zp.round_robin_index[x] += 1
 ;     if zp.round_robin_index[x] >= VPATH_NUM:
 ;         zp.round_robin_index[x] = 0
 ;     return target_col
-; 
+    rts
+
 ; # Find target column when enemy reaches top or bottom
 ; def get_target_col(c, allowed_vert):
+get_target_col nop
 ;     if allowed_vert & TILE_UP:
 ;         x = 1
 ;         rr_table = round_robin_up
+    lda allowed_vert
+    and #TILE_HORZ
+    bne ?down
+    ldy #0
+    lda #<round_robin_up
+    sta scratch_ptr
+    lda #>round_robin_up
+    sta scratch_ptr+1
+    jmp ?load
+
 ;     else:
 ;         x = 0
 ;         rr_table = round_robin_down
-; 
+?down
+    ldy #0
+    lda #<round_robin_down
+    sta scratch_ptr
+    lda #>round_robin_down
+    sta scratch_ptr+1
+    
 ;     target_col = get_next_round_robin(rr_table, x)
+?load jsr get_next_round_robin
 ;     if target_col == c:
 ;         # don't go back up the same column, skip to next one
 ;         target_col = get_next_round_robin(rr_table, x)
-; 
+    cmp c
+    bne ?left
+    jsr get_next_round_robin
+
 ;     if target_col < c:
 ;         current = TILE_LEFT
+?left sta actor_target_col,x
+    bcs ?right
+    lda #TILE_LEFT
+    sta current
+    rts
+
 ;     else:
 ;         current = TILE_RIGHT
+?right lda #TILE_LEFT
+    sta current
+    rts
 ;     actor_target_col[zp.current_actor] = target_col
 ;     return current
 ; 
@@ -547,34 +591,61 @@ decide_orbiter nop
 
 ; def decide_direction():
 decide_direction nop
-    rts
 ;     current = actor_dir[zp.current_actor]
+    lda actor_dir,x
+    sta current
 ;     r = actor_row[zp.current_actor]
 ;     c = actor_col[zp.current_actor]
+    lda actor_row,x
+    sta r
+    lda actor_col,x
+    sta c
 ;     allowed = get_allowed_dirs(r, c)
+    jsr get_allowed_dirs
+
 ;     updown = actor_updown[zp.current_actor]
+    lda actor_updown,x
+    sta updown
 ; 
 ;     allowed_horz = allowed & TILE_HORZ
 ;     allowed_vert = allowed & TILE_VERT
+    lda allowed
+    and #TILE_HORZ
+    sta allowed_horz
+    lda allowed
+    and #TILE_VERT
+    sta allowed_vert
+
 ;     if allowed_horz:
 ;         # left or right is available, we must go that way, because that's the
 ;         # Amidar(tm) way
-; 
+    lda allowed_horz
+    beq ?finalize
+
 ;         if allowed_horz == TILE_HORZ:
 ;             # *Both* left and right are available, which means we're either in
 ;             # the middle of an box horz segment *or* at the top or bottom (but
 ;             # not at a corner)
+    cmp #TILE_HORZ
+    bne ?one_horz
 ; 
 ;             if allowed_vert:
 ;                 # At a T junction at the top or bottom. What we do depends on
 ;                 # which direction we approached from
+    lda allowed_vert
+    beq ?no_updown
 ; 
 ;                 if current & TILE_VERT:
+    lda current
+    and #TILE_VERT
+    beq ?approach_horz
 ;                     # approaching vertically means go L or R; choose direction
 ;                     # based on a round robin so the enemy doesn't go back up
 ;                     # the same path. Sets the target column for this enemy to
 ;                     # be used when approaching the T horizontally
 ;                     current = get_target_col(c, allowed_vert)
+    jsr get_target_col
+    jmp ?finalize
 ; 
 ;                     if allowed_vert & TILE_UP:
 ;                         logic_log.debug("enemy %d: at bot T, new dir %x, col=%d target=%d" % (zp.current_actor, current, c, actor_target_col[zp.current_actor]))
@@ -585,9 +656,16 @@ decide_direction nop
 ;                     # vpath to use
 ; 
 ;                     if actor_target_col[zp.current_actor] == c:
+?approach_horz lda actor_target_col,x
+    cmp c
+    bne ?skip_vert
 ;                         # Going vertical! Reverse desired up/down direction
 ;                         updown = allowed_vert
 ;                         current = allowed_vert
+    lda allowed_vert
+    sta updown
+    sta current
+    jmp ?finalize
 ; 
 ;                         if allowed_vert & TILE_UP:
 ;                             logic_log.debug("enemy %d: at bot T, reached target=%d, going up" % (zp.current_actor, c))
@@ -595,6 +673,7 @@ decide_direction nop
 ;                             logic_log.debug("enemy %d: at top T, reached target=%d, going down" % (zp.current_actor, c))
 ;                     else:
 ;                         # skip this vertical, keep on moving
+?skip_vert jmp ?finalize
 ; 
 ;                         if allowed_vert & TILE_UP:
 ;                             logic_log.debug("enemy %d: at bot T, col=%d target=%d; skipping" % (zp.current_actor, c, actor_target_col[zp.current_actor]))
@@ -605,30 +684,52 @@ decide_direction nop
 ;                 # no up or down available, so keep marching on in the same
 ;                 # direction.
 ;                 logic_log.debug("enemy %d: no up/down, keep moving %s" % (zp.current_actor, str_dirs(current)))
+?no_updown jmp ?finalize
+
 ; 
 ;         else:
+?one_horz lda allowed_vert
 ;             # only one horizontal dir is available
 ; 
 ;             if allowed_vert == TILE_VERT:
 ;                 # At a left or right T junction...
+    cmp #TILE_VERT
+    bne ?at_corner
 ; 
 ;                 if current & TILE_VERT:
 ;                     # moving vertically. Have to take the horizontal path
 ;                     current = allowed_horz
 ;                     logic_log.debug("enemy %d: taking hpath, start moving %s" % (zp.current_actor, str_dirs(current)))
+    lda current
+    and #TILE_VERT
+    beq ?horz_t
+    lda allowed_horz
+    sta current
+    jmp ?finalize
+
 ;                 else:
 ;                     # moving horizontally into the T, forcing a vertical turn.
 ;                     # Go back to preferred up/down direction
 ;                     current = updown
 ;                     logic_log.debug("enemy %d: hpath end, start moving %s" % (zp.current_actor, str_dirs(current)))
+?horz_t lda updown
+    sta current
+    jmp ?finalize
+
 ;             else:
 ;                 # At a corner, because this tile has exactly one vertical and
 ;                 # one horizontal path.
 ; 
 ;                 if current & TILE_VERT:
+?at_corner lda current
+    and #TILE_VERT
+    beq ?horz_top_bot
+
 ;                     # moving vertically, and because this is a corner, the
 ;                     # target column must be set up
 ;                     current = get_target_col(c, allowed_vert)
+    jsr get_target_col
+    jmp ?finalize
 ; 
 ;                     if allowed_horz & TILE_LEFT:
 ;                         logic_log.debug("enemy %d: at right corner col=%d, heading left to target=%d" % (zp.current_actor, c, actor_target_col[zp.current_actor]))
@@ -639,6 +740,9 @@ decide_direction nop
 ;                     # here, the target column must also be this column
 ;                     current = allowed_vert
 ;                     updown = allowed_vert
+?horz_top_bot lda allowed_vert
+    sta current
+    sta updown
 ;                     if allowed_vert & TILE_UP:
 ;                         logic_log.debug("enemy %d: at bot corner col=%d with target %d, heading up" % (zp.current_actor, c, actor_target_col[zp.current_actor]))
 ;                     else:
@@ -657,6 +761,12 @@ decide_direction nop
 ;     actor_updown[zp.current_actor] = updown
 ;     actor_dir[zp.current_actor] = current
 ;     set_speed(current)
+?finalize lda updown
+    sta actor_updown,x
+    lda current
+    sta actor_dir,x
+    jsr set_speed
+    rts
 
 
 
