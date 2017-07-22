@@ -187,8 +187,20 @@ get_next_tile nop
 ;     else:
 ;         sub = actor_xpixel[zp.current_actor]
 ;         return sub == X_MIDPOINT
-
-
+check_midpoint nop
+    lda current
+    and #TILE_VERT
+    beq ?lr
+    lda actor_ypixel,x
+    cmp #Y_MIDPOINT
+    beq ?mid
+?no lda #0
+    rts
+?lr lda actor_xpixel,x
+    cmp #X_MIDPOINT
+    bne ?no
+?mid lda #1
+    rts
 
 
 ; # Move enemy given the enemy index
@@ -198,68 +210,165 @@ move_enemy nop
     lda actor_dir,x
     sta current
 
-    lda actor_row,x
-    clc
-    adc #1
-    and #$0f
-    sta actor_row,x
-    lda actor_col,x
-    clc
-    adc #1
-    and #$0f
-    sta actor_col,x
+;    lda actor_row,x
+;    clc
+;    adc #1
+;    and #$0f
+;    sta actor_row,x
+;    lda actor_col,x
+;    clc
+;    adc #1
+;    and #$0f
+;    sta actor_col,x
+
+
 ; 
 ;     # check sub-pixel location to see if we've reached a decision point
 ;     temp = check_midpoint(current)
+    jsr check_midpoint
+    sta tempcheck
+
 ;     pixel_move(current)
+    jsr pixel_move
 ;     # check if moved to next tile. pixel fraction stays the same to keep
 ;     # the speed consistent, only the pixel gets adjusted
 ;     if actor_xpixel[zp.current_actor] < 0:
 ;         actor_col[zp.current_actor] -= 1
 ;         actor_xpixel[zp.current_actor] += X_TILEMAX
+    lda actor_xpixel,x
+    bpl ?right
+    dec actor_col,x
+    lda actor_xpixel,x
+    clc
+    adc #X_TILEMAX
+    sta actor_xpixel,x
+    jmp ?mid
+
 ;     elif actor_xpixel[zp.current_actor] >= X_TILEMAX:
 ;         actor_col[zp.current_actor] += 1
 ;         actor_xpixel[zp.current_actor] -= X_TILEMAX
+?right lda actor_xpixel,x
+    cmp #X_TILEMAX
+    bcc ?up
+    inc actor_col,x
+    lda actor_xpixel,x
+    sec
+    sbc #X_TILEMAX
+    sta actor_xpixel,x
+    jmp ?mid
+
+
+
 ;     elif actor_ypixel[zp.current_actor] < 0:
 ;         actor_row[zp.current_actor] -= 1
 ;         actor_ypixel[zp.current_actor] += Y_TILEMAX
+?up lda actor_ypixel,x
+    bpl ?down
+    dec actor_row,x
+    lda actor_ypixel,x
+    clc
+    adc #Y_TILEMAX
+    sta actor_ypixel,x
+    jmp ?mid
+
 ;     elif actor_ypixel[zp.current_actor] >= Y_TILEMAX:
 ;         actor_row[zp.current_actor] += 1
 ;         actor_ypixel[zp.current_actor] -= Y_TILEMAX
+?down lda actor_ypixel,x
+    cmp #X_TILEMAX
+    bcc ?ret
+    inc actor_row,x
+    lda actor_ypixel,x
+    sec
+    sbc #Y_TILEMAX
+    sta actor_ypixel,x
+
 ;     s = "#%d: tile=%d,%d pix=%d,%d frac=%d,%d  " % (zp.current_actor, actor_col[zp.current_actor], actor_row[zp.current_actor], actor_xpixel[zp.current_actor], actor_ypixel[zp.current_actor], actor_xfrac[zp.current_actor], actor_yfrac[zp.current_actor])
 ;     logic_log.debug(s)
 ;     pad.addstr(0 + zp.current_actor, 40, s)
 ;     if not temp:
+?mid lda tempcheck ; check if crossing onto midpoint
+    bne ?ret ; nope, already on midpoint so must have checked last time
+
+    jsr check_midpoint
+    beq ?ret ; nope, still not on midpoint
 ;         if check_midpoint(current):
 ;             # crossed the midpoint! Make a decision on the next allowed direction
 ;             if actor_status[zp.current_actor] == ORBITER_NORMAL:
 ;                 decide_orbiter()
 ;             else:
 ;                 decide_direction()
-    rts
+    lda actor_status,x
+    cmp #ORBITER_NORMAL
+    bne ?dir
+    jmp decide_orbiter
+?dir jmp decide_direction
+?ret rts
 
 ; 
 ; def pixel_move(current):
+pixel_move nop
+    lda current
+
 ;     if current & TILE_UP:
 ;         actor_yfrac[zp.current_actor] -= actor_yspeed[zp.current_actor]
 ;         if actor_yfrac[zp.current_actor] < 0:
 ;             actor_ypixel[zp.current_actor] -= 1
 ;             actor_yfrac[zp.current_actor] += 256
+?up cmp #TILE_UP
+    bne ?down
+    lda actor_yfrac,x
+    sec
+    sbc actor_yspeed,x
+    sta actor_yfrac,x
+    bcs ?ret
+    dec actor_ypixel,x ; haha! Don't have to adjust yfrac because it's only 8 bits!
+    rts
+
 ;     elif current & TILE_DOWN:
 ;         actor_yfrac[zp.current_actor] += actor_yspeed[zp.current_actor]
 ;         if actor_yfrac[zp.current_actor] > 255:
 ;             actor_ypixel[zp.current_actor] += 1
 ;             actor_yfrac[zp.current_actor] -= 256
+?down cmp #TILE_DOWN
+    bne ?left
+    lda actor_yfrac,x
+    clc
+    adc actor_yspeed,x
+    sta actor_yfrac,x
+    bcc ?ret
+    inc actor_ypixel,x
+    rts
+
 ;     elif current & TILE_LEFT:
 ;         actor_xfrac[zp.current_actor] -= actor_xspeed[zp.current_actor]
 ;         if actor_xfrac[zp.current_actor] < 0:
 ;             actor_xpixel[zp.current_actor] -= 1
 ;             actor_xfrac[zp.current_actor] += 256
+?left cmp #TILE_LEFT
+    bne ?right
+    lda actor_xfrac,x
+    sec
+    sbc actor_xspeed,x
+    sta actor_xfrac,x
+    bcs ?ret
+    dec actor_xpixel,x
+    rts
+
 ;     elif current & TILE_RIGHT:
 ;         actor_xfrac[zp.current_actor] += actor_xspeed[zp.current_actor]
 ;         if actor_xfrac[zp.current_actor] > 255:
 ;             actor_xpixel[zp.current_actor] += 1
 ;             actor_xfrac[zp.current_actor] -= 256
+?right cmp #TILE_RIGHT
+    bne ?ret
+    lda actor_xfrac,x
+    clc
+    adc actor_xspeed,x
+    sta actor_xfrac,x
+    bcc ?ret
+    inc actor_xpixel,x
+?ret rts
 
 
 ; def set_speed(current):
@@ -292,13 +401,24 @@ set_speed nop
 
 ; 
 ; def decide_orbiter():
+decide_orbiter nop
 ;     current = actor_dir[zp.current_actor]
+    lda actor_dir,x
+    sta current
 ;     r = actor_row[zp.current_actor]
 ;     c = actor_col[zp.current_actor]
+    lda actor_row,x
+    sta r
+    lda actor_col,x
+    sta c
 ;     allowed = get_allowed_dirs(r, c)
-; 
+    jsr get_allowed_dirs
+
 ;     if allowed & current:
+    and current
+    beq ?newdir
 ;         # Can continue the current direction, so keep on doing it
+    rts
 ; 
 ;         logic_log.debug("orbiter %d: continuing %s" % (zp.current_actor, str_dirs(current)))
 ;     else:
@@ -311,8 +431,23 @@ set_speed nop
 ;             current = allowed & TILE_VERT
 ;         actor_dir[zp.current_actor] = current
 ;         set_speed(current)
-; 
+
+?newdir lda current
+    and #TILE_VERT
+    beq ?lr
+    lda allowed
+    and #TILE_HORZ
+    bne ?set
+?lr lda allowed
+    and #TILE_VERT
+?set sta actor_dir,x
+    jmp set_speed
+
+
+
 ; def decide_direction():
+decide_direction nop
+    rts
 ;     current = actor_dir[zp.current_actor]
 ;     r = actor_row[zp.current_actor]
 ;     c = actor_col[zp.current_actor]

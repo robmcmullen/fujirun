@@ -69,6 +69,7 @@ textptr       .ds 2
 hgrptr        .ds 2
 temprow       .ds 1
 tempcol       .ds 1
+tempcheck .ds 1
 
     *= $0050
 mazeaddr    .ds 2
