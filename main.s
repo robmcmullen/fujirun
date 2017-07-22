@@ -142,9 +142,38 @@ start nop
 
     ;jsr clrscr
     jsr init_once
-    jsr title_screen
+
+restart jsr title_screen
     jsr init_game
     jsr game_loop
+
+check_restart ldx #34
+    ldy player_score_row
+    lda #<game_text
+    sta scratch_ptr
+    lda #>game_text
+    sta scratch_ptr+1
+    jsr printstr
+    ldx #35
+    ldy player_lives_row
+    lda #<over_text
+    sta scratch_ptr
+    lda #>over_text
+    sta scratch_ptr+1
+    jsr printstr
+    jsr pageflip
+
+    lda KBDSTROBE
+?1  lda KEYBOARD
+    bpl ?1
+    lda KBDSTROBE
+    jmp restart
+
+game_text .byte "GAME  ",0
+over_text .byte "OVER",0
+
+forever
+    jmp forever
 
 init_once
     jsr init_screen_once
@@ -155,9 +184,6 @@ init_once
     dex
     bne ?1
     rts
-
-forever
-    jmp forever
 
 clrscr
     lda #0

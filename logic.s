@@ -97,8 +97,9 @@ evaluate_status nop
     sta actor_active,x
     rts
 
-?game_over nop
-    rts
+?game_over ldx #$ff
+    txs
+    jmp check_restart
 
 ?alive lda #1
     sta actor_active,x
