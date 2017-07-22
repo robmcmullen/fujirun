@@ -503,8 +503,8 @@ pixel_move nop
 ;         actor_xspeed[zp.current_actor] = level_speeds[zp.level]
 ;         actor_yspeed[zp.current_actor] = 0
 
-; direction in A, actor in X; clobbers all
-set_speed nop
+; actor in X; clobbers all
+set_speed lda actor_dir,x
     and #TILE_VERT
     beq ?1
     lda #0
@@ -565,9 +565,9 @@ decide_orbiter nop
 ?newdir lda current
     and #TILE_VERT
     beq ?lr
+
     lda allowed
     and #TILE_HORZ
-    beq ?lr
 
     sta actor_dir,x
     ; horizontal direction allowed; reset vertical subpixel to be right in the middle
