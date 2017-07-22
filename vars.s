@@ -21,6 +21,7 @@ actor_input_dir .ds MAX_ACTORS  ; #  current joystick input direction
 actor_active .ds MAX_ACTORS ; 1 = active, 0 = skip, $ff = end
 actor_l .ds MAX_ACTORS
 actor_h .ds MAX_ACTORS
+actor_turn_zone .ds MAX_ACTORS ; debugging; is player in turn zone:
 
 player_score  .ds 4
 player_next_target_score  .ds 4

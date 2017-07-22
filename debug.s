@@ -112,10 +112,10 @@ debug_player nop
     ldy scratch_row
     jsr debughex
     ldx #0
-    lda actor_row,x
+    lda actor_turn_zone,x
     ldx #38
     ldy scratch_row
-    ;jsr debughex
+    jsr debughex
 
 ;    dec scratch_row
 ;    ldx #34

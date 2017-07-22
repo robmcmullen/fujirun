@@ -355,7 +355,7 @@ move_enemy nop
 
     jsr crossed_midpoint ; save this for later
     lda crossed
-    beq ?left
+    beq move_tile
 
 ;         if check_midpoint(current):
 ;             # crossed the midpoint! Make a decision on the next allowed direction
@@ -367,9 +367,10 @@ move_enemy nop
     cmp #ORBITER_TYPE
     bne ?dir
     jsr decide_orbiter
-    jmp ?left
+    jmp move_tile
 ?dir jsr decide_direction
 
+move_tile nop
 ;     # check if moved to next tile. pixel fraction stays the same to keep
 ;     # the speed consistent, only the pixel gets adjusted
 ;     if actor_xpixel[zp.current_actor] < 0:
@@ -797,6 +798,7 @@ move_player nop
     sta r
     lda actor_col,x
     sta c
+
 ;     allowed = get_allowed_dirs(r, c)
     jsr get_allowed_dirs
 ;     current = actor_dir[zp.current_actor]
@@ -805,41 +807,139 @@ move_player nop
 ;     d = actor_input_dir[zp.current_actor]
     lda actor_input_dir,x
     sta d
+
 ;     pad.addstr(26, 0, "r=%d c=%d allowed=%s d=%s current=%s      " % (r, c, str_dirs(allowed), str_dirs(d), str_dirs(current)))
 ;     if d:
-    beq ?end
-;         if allowed & d:
-    and allowed
-    beq ?illegal
-;             # player wants to go in an allowed direction, so go!
-;             actor_dir[zp.current_actor] = d
-;             r, c = get_next_tile(r, c, d)
-;             actor_row[zp.current_actor] = r
-;             actor_col[zp.current_actor] = c
-    lda d
-    sta actor_dir,x
-    jmp ?continue
+    bne ?1
+    rts ; no direction => no movement
 
-;         else:
-;             # player wants to go in an illegal direction. instead, continue in
-;             # direction that was last requested
-; 
-;             if allowed & current:
-;                 r, c = get_next_tile(r, c, current)
-;                 actor_row[zp.current_actor] = r
-;                 actor_col[zp.current_actor] = c
+;            # player wants to go in an illegal direction. instead, continue in
+;            # direction that was last requested
 ?illegal lda allowed
     and current
-    bne ?continue
+    bne ?not_turn_zone
     rts
 
-?continue jsr get_next_tile
-    lda r
-    sta actor_row,x
-    lda c
-    sta actor_col,x
+?1  lda #0
+    sta actor_turn_zone,x
+    lda actor_xpixel,x
+    tay
+    lda x_allowed_turn,y
+    beq ?not_zone
+    lda actor_ypixel,x
+    beq ?not_zone
+    lda #1
+    sta actor_turn_zone,x
 
-?end rts
+;        if allowed & d:
+?not_zone lda allowed
+    and d
+    beq ?illegal
+;            # player wants to go in an allowed direction
+;            # is desired direction a change in axes?
+;            if current & TILE_VERT: # current is vertical
+    lda current
+    and #TILE_VERT
+    beq ?allowed_horz
+
+;                if d & TILE_HORZ: # dir change; wants horizontal
+    lda d
+    and #TILE_HORZ
+    beq ?cur_dir_wants_same_axis
+
+;                    if turn_zone:
+;                        actor_ypixel[zp.current_actor] = 3
+;                        actor_yfrac[zp.current_actor] = 0
+;                        actor_dir[zp.current_actor] = d
+;                        set_speed(d)
+;                        pixel_move(d)
+    lda actor_turn_zone,x
+    beq ?not_turn_zone
+
+    lda d
+    sta current
+    sta actor_dir,x
+    lda #Y_MIDPOINT
+    sta actor_ypixel,x
+    lda #0
+    sta actor_yfrac,x
+    jsr set_speed
+    jmp pixel_move
+
+;                    else: # wants horz but not in turn zone
+?not_turn_zone
+    lda current
+?not_turn_zone2
+    sta actor_dir,x
+    jsr set_speed
+    jsr pixel_move
+    jmp move_tile
+;                        if current & allowed:
+;                            player_log.debug("same")
+;                            actor_dir[zp.current_actor] = current
+;                            set_speed(current)
+;                            pixel_move(current)
+;                            move_tile()
+;                        else: # opposite of allowed; valid before turn zone
+;                            player_log.debug("opposite!")
+;                            actor_dir[zp.current_actor] = current
+;                            set_speed(current)
+;                            pixel_move(current)
+;                            move_tile()
+
+
+;                else: # current vertical, wants vertical, allowed
+?cur_dir_wants_same_axis
+;                    actor_dir[zp.current_actor] = d
+;                    set_speed(d)
+;                    pixel_move(d)
+;                    move_tile()
+    lda d
+    jmp ?not_turn_zone2
+
+
+;            else: # current is horizontal
+?allowed_horz
+;                if d & TILE_VERT: # dir change; wants vertical
+;                    y = actor_ypixel[zp.current_actor]
+;                    if y in [2, 3, 4]:
+;                        actor_xpixel[zp.current_actor] = 3
+;                        actor_xfrac[zp.current_actor] = 0
+;                        actor_dir[zp.current_actor] = d
+;                        set_speed(d)
+;                        pixel_move(d)
+;                    else: # wants vert but not in turn zone
+;                        if current & allowed:
+;                            actor_dir[zp.current_actor] = current
+;                            set_speed(current)
+;                            pixel_move(current)
+;                            move_tile()
+;                        else: # opposite of allowed; valid before turn zone
+;                            player_log.debug("opposite!")
+;                            actor_dir[zp.current_actor] = current
+;                            set_speed(current)
+;                            pixel_move(current)
+;                            move_tile()
+;                else: # current horz, wants horz, allowed
+;                    actor_dir[zp.current_actor] = d
+;                    pixel_move(d)
+;                    move_tile()
+    lda d
+    and #TILE_VERT
+    beq ?cur_dir_wants_same_axis
+
+    lda actor_turn_zone,x
+    beq ?not_turn_zone
+
+    lda d
+    sta current
+    sta actor_dir,x
+    lda #X_MIDPOINT
+    sta actor_xpixel,x
+    lda #0
+    sta actor_xfrac,x
+    jsr set_speed
+    jmp pixel_move
 
 
 ; 

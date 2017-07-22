@@ -46,13 +46,14 @@ import logging
 logging.basicConfig(level=logging.WARNING)
 init_log = logging.getLogger("init")
 logic_log = logging.getLogger("logic")
-logic_log.setLevel(logging.DEBUG)
+#logic_log.setLevel(logging.DEBUG)
 draw_log = logging.getLogger("draw")
 maze_log = logging.getLogger("maze")
 box_log = logging.getLogger("maze")
 game_log = logging.getLogger("game")
 collision_log = logging.getLogger("collision")
-collision_log.setLevel(logging.DEBUG)
+player_log = logging.getLogger("player")
+player_log.setLevel(logging.DEBUG)
 
 CURSES = 1
 
@@ -116,7 +117,8 @@ def init_screen(*args, **kwargs):
         curses.ACS_CKBOARD,
     ]
 
-    main()
+    #main()
+    play_game()
 
 
 def main():
@@ -719,7 +721,7 @@ def init_orbiter():
     actor_row[zp.current_actor] = ORBITER_START_ROW
     actor_dir[zp.current_actor] = TILE_UP
     actor_status[zp.current_actor] = ORBITER_NORMAL
-    set_speed(TILE_UP)
+    #set_speed(TILE_UP)
 
 def init_amidar():
     init_actor()
@@ -730,7 +732,7 @@ def init_amidar():
     actor_updown[zp.current_actor] = TILE_DOWN
     actor_dir[zp.current_actor] = TILE_DOWN
     actor_status[zp.current_actor] = AMIDAR_NORMAL
-    set_speed(TILE_DOWN)
+    #set_speed(TILE_DOWN)
 
 def init_player():
     init_actor()
@@ -738,6 +740,7 @@ def init_player():
     actor_col[zp.current_actor] = addr[zp.current_actor]
     actor_row[zp.current_actor] = MAZE_BOT_ROW
     actor_status[zp.current_actor] = PLAYER_ALIVE
+    set_speed(TILE_DOWN)
 
 def init_actors():
     get_col_randomizer(amidar_start_col)
@@ -935,13 +938,7 @@ def check_midpoint(current):
         sub = actor_xpixel[zp.current_actor]
         return sub == X_MIDPOINT
 
-# Move enemy given the enemy index
-def move_enemy():
-    current = actor_dir[zp.current_actor]
-
-    # check sub-pixel location to see if we've reached a decision point
-    temp = check_midpoint(current)
-    pixel_move(current)
+def move_tile():
     # check if moved to next tile. pixel fraction stays the same to keep
     # the speed consistent, only the pixel gets adjusted
     if actor_xpixel[zp.current_actor] < 0:
@@ -956,6 +953,15 @@ def move_enemy():
     elif actor_ypixel[zp.current_actor] >= Y_TILEMAX:
         actor_row[zp.current_actor] += 1
         actor_ypixel[zp.current_actor] -= Y_TILEMAX
+
+# Move enemy given the enemy index
+def move_enemy():
+    current = actor_dir[zp.current_actor]
+
+    # check sub-pixel location to see if we've reached a decision point
+    temp = check_midpoint(current)
+    pixel_move(current)
+    move_tile()
     s = "#%d: tile=%d,%d pix=%d,%d frac=%d,%d  " % (zp.current_actor, actor_col[zp.current_actor], actor_row[zp.current_actor], actor_xpixel[zp.current_actor], actor_ypixel[zp.current_actor], actor_xfrac[zp.current_actor], actor_yfrac[zp.current_actor])
     logic_log.debug(s)
     pad.addstr(0 + zp.current_actor, 40, s)
@@ -1136,21 +1142,83 @@ def move_player():
     current = actor_dir[zp.current_actor]
     d = actor_input_dir[zp.current_actor]
     pad.addstr(26, 0, "r=%d c=%d allowed=%s d=%s current=%s      " % (r, c, str_dirs(allowed), str_dirs(d), str_dirs(current)))
+
+    turn_zone = False
+    x = actor_xpixel[zp.current_actor]
+    if x in [2, 3, 4]:
+        y = actor_ypixel[zp.current_actor]
+        if y in [2, 3, 4]:
+            turn_zone = True
+
     if d:
         if allowed & d:
-            # player wants to go in an allowed direction, so go!
-            actor_dir[zp.current_actor] = d
-            r, c = get_next_tile(r, c, d)
-            actor_row[zp.current_actor] = r
-            actor_col[zp.current_actor] = c
+            # player wants to go in an allowed direction
+            player_log.debug("allowed, cur=%s, d=%s, turnzone=%s x=%d.%d y=%d.%d, r=%d c=%d" % (current, d, turn_zone, actor_xpixel[zp.current_actor], actor_xfrac[zp.current_actor], actor_ypixel[zp.current_actor], actor_yfrac[zp.current_actor], actor_col[zp.current_actor], actor_row[zp.current_actor]))
+            # is desired direction a change in axes?
+            if current & TILE_VERT: # current is vertical
+                if d & TILE_HORZ: # dir change; wants horizontal
+                    if turn_zone:
+                        actor_ypixel[zp.current_actor] = 3
+                        actor_yfrac[zp.current_actor] = 0
+                        actor_dir[zp.current_actor] = d
+                        set_speed(d)
+                        pixel_move(d)
+                    else: # wants horz but not in turn zone
+                        if current & allowed:
+                            player_log.debug("same")
+                            actor_dir[zp.current_actor] = current
+                            set_speed(current)
+                            pixel_move(current)
+                            move_tile()
+                        else: # opposite of allowed; valid before turn zone
+                            player_log.debug("opposite!")
+                            actor_dir[zp.current_actor] = current
+                            set_speed(current)
+                            pixel_move(current)
+                            move_tile()
+                else: # current vertical, wants vertical, allowed
+                    actor_dir[zp.current_actor] = d
+                    set_speed(d)
+                    pixel_move(d)
+                    move_tile()
+            else: # current is horizontal
+                if d & TILE_VERT: # dir change; wants vertical
+                    y = actor_ypixel[zp.current_actor]
+                    if y in [2, 3, 4]:
+                        actor_xpixel[zp.current_actor] = 3
+                        actor_xfrac[zp.current_actor] = 0
+                        actor_dir[zp.current_actor] = d
+                        set_speed(d)
+                        pixel_move(d)
+                    else: # wants vert but not in turn zone
+                        if current & allowed:
+                            actor_dir[zp.current_actor] = current
+                            set_speed(current)
+                            pixel_move(current)
+                            move_tile()
+                        else: # opposite of allowed; valid before turn zone
+                            player_log.debug("opposite!")
+                            actor_dir[zp.current_actor] = current
+                            set_speed(current)
+                            pixel_move(current)
+                            move_tile()
+                else: # current horz, wants horz, allowed
+                    actor_dir[zp.current_actor] = d
+                    pixel_move(d)
+                    move_tile()
         else:
             # player wants to go in an illegal direction. instead, continue in
             # direction that was last requested
-
+            player_log.debug("illegal: allowed=%s cur=%s, d=%s, turnzone=%s x=%d.%d y=%d.%d, r=%d c=%d" % (allowed, current, d, turn_zone, actor_xpixel[zp.current_actor], actor_xfrac[zp.current_actor], actor_ypixel[zp.current_actor], actor_yfrac[zp.current_actor], actor_col[zp.current_actor], actor_row[zp.current_actor]))
             if allowed & current:
-                r, c = get_next_tile(r, c, current)
-                actor_row[zp.current_actor] = r
-                actor_col[zp.current_actor] = c
+                player_log.debug("continuing current dir")
+                actor_dir[zp.current_actor] = current
+                set_speed(current)
+                pixel_move(current)
+                move_tile()
+#                r, c = get_next_tile(r, c, current)
+#                actor_row[zp.current_actor] = r
+#                actor_col[zp.current_actor] = c
 
 
 ##### Collision detection
@@ -1358,7 +1426,7 @@ def game_loop():
         update_background()
         draw_actors()
         show_screen()
-        time.sleep(.01)
+        #time.sleep(.01)
         if count % 50 == 0:
             pad.addstr(20, MAZE_SCORE_COL, "%f" % (time.time() - time_0))
 

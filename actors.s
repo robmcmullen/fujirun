@@ -102,6 +102,10 @@ X_TILEMAX = 7
 Y_MIDPOINT = 3
 Y_TILEMAX = 8
 
+; defines the zone around the midpoint where the player can change to any direction, not just backtracking.
+x_allowed_turn .byte 0, 0, 1, 1, 1, 0, 0
+y_allowed_turn .byte 0, 0, 1, 1, 1, 0, 0, 0
+
 NOT_VISIBLE = 0
 PLAYER_DEAD = 1
 PLAYER_ALIVE = 2
@@ -215,6 +219,7 @@ init_actor nop
     sta actor_frame_counter,x
     sta actor_target_col,x
     sta actor_input_dir,x
+    sta actor_turn_zone,x
     lda #MAZE_BOT_ROW
     sta actor_row,x
     lda #TILE_UP
