@@ -85,7 +85,7 @@ mazerow lda textrows_l,y
 ;        y += 1
 ;    init_boxes()
 clear_maze nop
-    ldx #MAZE_LEFT_COL
+    ldx #0
     lda #0
 ?1  jsr text_put_col
     inx

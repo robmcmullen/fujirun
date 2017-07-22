@@ -1,7 +1,7 @@
 SPRITES = atari-sprite9x11.png apple-sprite9x11.png
 CPSPRITES = apple-sprite9x11.png moldy_burger.png
 
-all: cpbg.dsk titles.dsk working.dsk
+all: cpbg.dsk titles.dsk working.dsk demo.dsk
 
 cpbg-sprite-driver.s: $(CPSPRITES)
 	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o cpbg $(CPSPRITES)
@@ -52,6 +52,9 @@ working.dsk: working.xex
 	rm -f working.dsk
 	atrcopy working.dsk boot -b working.xex --brun 6000 -f
 	cp working.var /home/rob/.wine/drive_c/applewin/APPLE2E.SYM
+
+demo.dsk: working.s rand.s maze.s working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s player-missile.hgr partycrasher-software.hgr kansasfest-hackfest.hgr title.hgr
+	atrcopy demo.dsk boot -d kansasfest-hackfest.hgr@2000 player-missile.hgr@4000 partycrasher-software.hgr@2000 -b working.xex --brun 6000 -f
 
 clean:
 	rm -f cpbg.dsk cpbg.xex cpbg.var cpbg.lst cpbg-sprite-driver.s cpbg-bwsprite.s cpbg-hgrcols-7x1.s cpbg-hgrrows.s cpbg-apple_sprite9x11.s cpbg-fastfont.s cpbg-moldy_burger.s

@@ -136,7 +136,7 @@ start nop
     bit TXTPAGE1
     bit SETHIRES
 
-    jsr clrscr
+    ;jsr clrscr
     jsr init_once
     jsr title_screen
     jsr init_game
@@ -205,8 +205,8 @@ initbackground nop
     jsr init_maze
     jsr init_panel
     jsr copytexthgr  ; page2 becomes the source
-;    jsr wipeclear1
-;    jsr wipe2to1
+    jsr wipeclear1
+    jsr wipe2to1
     jsr copy2to1
     rts
 
