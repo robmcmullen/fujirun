@@ -190,9 +190,9 @@ title_screen nop
     rts
 
 init_game nop
-    jsr initbackground
     jsr init_level
     jsr init_actors
+    jsr initbackground
     lda #0
     sta frame_count
     sta frame_count+1
@@ -203,6 +203,7 @@ init_game nop
 initbackground nop
     jsr show_page1
     jsr init_maze
+    jsr init_panel
     jsr copytexthgr  ; page2 becomes the source
 ;    jsr wipeclear1
 ;    jsr wipe2to1
@@ -257,8 +258,8 @@ game_loop nop
     jsr paint_boxes
     jsr renderstart
     jsr pageflip
-    jsr debug_player
-    jsr wait
+    ;jsr debug_player
+    ;jsr wait
     jmp game_loop
 
 
@@ -316,7 +317,7 @@ userinput
     pha
     ldx #38
     ldy #23
-    jsr printhex
+    jsr debughex
     ldx #0
     pla
     bpl input_not_movement ; stop movement of player if no direction input

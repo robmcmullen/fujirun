@@ -172,7 +172,7 @@ copytexthgr_src_smc
 copytexthgr_dest_smc
     jsr $ffff
     inx
-    cpx #32
+    cpx #40
     bcc copytexthgr_src_smc
     iny
     cpy #24

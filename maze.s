@@ -53,7 +53,8 @@ SCREEN_ROWS = 24
 ;# cols 33 - 39 is the score area
 MAZE_LEFT_COL = 1
 MAZE_RIGHT_COL = 31
-MAZE_SCORE_COL = 33
+MAZE_PANEL_COL = 33
+MAZE_SCORE_COL = 35
 SCREEN_COLS = 40
 
 ;# Orbiter goes around the outside border, but not through the maze

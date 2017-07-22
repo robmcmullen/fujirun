@@ -124,6 +124,9 @@ add_score nop
     adc #0
     sta player_score_h,x
     cld
+
+    jsr update_score
+
     rts
 
 

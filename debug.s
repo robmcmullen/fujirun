@@ -8,7 +8,7 @@ debugtext nop
     rts
 
 
-printhex ; A = hex byte, X = column, Y = row; A is clobbered, X&Y are not
+debughex ; A = hex byte, X = column, Y = row; A is clobbered, X&Y are not
     pha
     stx param_x
     lsr
@@ -33,10 +33,13 @@ hexdigit .byte "0123456789ABCDEF"
 printstr ; X = column, Y = row, scratch_ptr is text (null terminated)
     sty param_y
     ldy #0
-?next lda (scratch_ptr),y
+    sty param_index
+?next ldy param_index
+    lda (scratch_ptr),y
     beq ?exit
     ldy param_y
     jsr fastfont
+    inc param_index
     inx
     bne ?next
 ?exit rts
@@ -59,12 +62,12 @@ debug_player nop
     lda actor_input_dir,x
     ldx #35
     ldy scratch_row
-    jsr printhex
+    jsr debughex
     ldx #0
     lda actor_dir,x
     ldx #38
     ldy scratch_row
-    jsr printhex
+    jsr debughex
 
     dec scratch_row
     ldx #34
@@ -75,12 +78,12 @@ debug_player nop
     lda actor_x,x
     ldx #35
     ldy scratch_row
-    jsr printhex
+    jsr debughex
     ldx #0
     lda actor_y,x
     ldx #38
     ldy scratch_row
-    jsr printhex
+    jsr debughex
 
     dec scratch_row
     ldx #34
@@ -91,12 +94,12 @@ debug_player nop
     lda actor_col,x
     ldx #35
     ldy scratch_row
-    jsr printhex
+    jsr debughex
     ldx #0
     lda actor_row,x
     ldx #38
     ldy scratch_row
-    jsr printhex
+    jsr debughex
 
     dec scratch_row
     ldx #34
@@ -107,12 +110,12 @@ debug_player nop
     lda tdamageindex1
     ldx #35
     ldy scratch_row
-    jsr printhex
+    jsr debughex
     ldx #0
     lda tdamageindex2
     ldx #38
     ldy scratch_row
-    jsr printhex
+    jsr debughex
 
     dec scratch_row
     ldx #34
@@ -123,12 +126,12 @@ debug_player nop
     lda debug_mark_box
     ldx #35
     ldy scratch_row
-    jsr printhex
+    jsr debughex
     ldx #0
     lda debug_paint_box
     ldx #38
     ldy scratch_row
-    jsr printhex
+    jsr debughex
 
     ; amidar 4
     dec scratch_row
@@ -140,12 +143,12 @@ debug_player nop
     lda actor_col,x
     ldx #35
     ldy scratch_row
-    jsr printhex
+    jsr debughex
     ldx #FIRST_AMIDAR+3
     lda actor_row,x
     ldx #38
     ldy scratch_row
-    jsr printhex
+    jsr debughex
 
     ; amidar 3
     dec scratch_row
@@ -157,12 +160,12 @@ debug_player nop
     lda actor_col,x
     ldx #35
     ldy scratch_row
-    jsr printhex
+    jsr debughex
     ldx #FIRST_AMIDAR+2
     lda actor_row,x
     ldx #38
     ldy scratch_row
-    jsr printhex
+    jsr debughex
 
     ; amidar 2
     dec scratch_row
@@ -170,12 +173,12 @@ debug_player nop
     lda actor_xpixel,x
     ldx #35
     ldy scratch_row
-    jsr printhex
+    jsr debughex
     ldx #FIRST_AMIDAR+1
     lda actor_ypixel,x
     ldx #38
     ldy scratch_row
-    jsr printhex
+    jsr debughex
 
     dec scratch_row
     ldx #34
@@ -186,12 +189,12 @@ debug_player nop
     lda actor_col,x
     ldx #35
     ldy scratch_row
-    jsr printhex
+    jsr debughex
     ldx #FIRST_AMIDAR+1
     lda actor_row,x
     ldx #38
     ldy scratch_row
-    jsr printhex
+    jsr debughex
 
     ; amidar 1 (orbiter)
     dec scratch_row
@@ -199,24 +202,24 @@ debug_player nop
     lda actor_xpixel,x
     ldx #35
     ldy scratch_row
-    jsr printhex
+    jsr debughex
     ldx #FIRST_AMIDAR
     lda actor_ypixel,x
     ldx #38
     ldy scratch_row
-    jsr printhex
+    jsr debughex
 
     dec scratch_row
     ldx #FIRST_AMIDAR
     lda actor_xfrac,x
     ldx #35
     ldy scratch_row
-    jsr printhex
+    jsr debughex
     ldx #FIRST_AMIDAR
     lda actor_yfrac,x
     ldx #38
     ldy scratch_row
-    jsr printhex
+    jsr debughex
 
     dec scratch_row
     ldx #34
@@ -227,11 +230,11 @@ debug_player nop
     lda actor_col,x
     ldx #35
     ldy scratch_row
-    jsr printhex
+    jsr debughex
     ldx #FIRST_AMIDAR
     lda actor_row,x
     ldx #38
     ldy scratch_row
-    jsr printhex
+    jsr debughex
 
     rts

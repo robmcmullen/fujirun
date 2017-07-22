@@ -164,7 +164,52 @@ paint_boxes nop
 ;         pad.addstr(row - 1, MAZE_SCORE_COL, "       ")
 ;         pad.addstr(row, MAZE_SCORE_COL,     "Player%d" % (zp.current_actor + 1))
 ;         zp.current_actor += 1
-; 
+
+clear_panel nop
+    ldx #MAZE_RIGHT_COL+1
+    lda #0
+?1  jsr text_put_col
+    inx
+    cpx #40
+    bcc ?1
+    rts
+
+init_panel nop
+    jsr clear_panel
+
+    ldy #1
+    jsr mazerow
+    ldy #MAZE_PANEL_COL
+    ldx #0
+?1  lda player1_text,x
+    beq ?2
+    sta (mazeaddr),y
+    iny
+    inx
+    bne ?1
+?2  
+    ldy #6
+    jsr mazerow
+    ldy #MAZE_PANEL_COL
+    ldx #0
+?3  lda player2_text,x
+    beq ?4
+    sta (mazeaddr),y
+    iny
+    inx
+    bne ?3
+?4
+    ldx #0
+    jsr update_score
+    inx
+    jsr update_score
+    rts
+
+player1_text .byte "PLAYER1", 0
+player2_text .byte "PLAYER2", 0
+
+
+
 ; def show_lives(row, num):
 ;     i = 1
 ;     col = SCREEN_COLS
@@ -176,8 +221,48 @@ paint_boxes nop
 ;             c = " "
 ;         pad.addch(row, col, ord(c))
 ;         i += 1
-; 
+
+print_hex pha
+    stx param_x
+    lsr
+    lsr
+    lsr
+    lsr
+    tax
+    lda hexdigit,x
+    sta (mazeaddr),y
+    iny
+    pla
+    and #$0f
+    tax
+    lda hexdigit,x
+    sta (mazeaddr),y
+    iny
+    ldx param_x
+    rts
+
+
 ; def update_score():
+update_score nop
+    lda #MAZE_SCORE_COL
+    sta c
+    lda player_score_row,x
+    sta r
+    lda #4
+    sta size
+    jsr damage_string
+
+print_score nop
+    ldy player_score_row,x
+    jsr mazerow
+    ldy #MAZE_SCORE_COL
+    lda player_score_h,x
+    jsr print_hex
+    lda player_score_l,x
+    jsr print_hex
+    lda #'0'
+    sta (mazeaddr),y
+    rts
 ;     row = player_score_row[zp.current_actor]
 ;     if actor_status[zp.current_actor] == GAME_OVER:
 ;         pad.addstr(row - 1, MAZE_SCORE_COL, "GAME   ")
