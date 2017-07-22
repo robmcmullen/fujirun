@@ -100,6 +100,10 @@ round_robin_index .ds 2
 level .ds 1
 last_enemy .ds 1
 
+    * = $0070
+before .ds 1
+crossed .ds 1
+
 
 ; memory map
 ; BF00 - BFFF: damage for page 1
@@ -211,8 +215,6 @@ game_loop nop
     inc frame_count+1
 ?1  jsr userinput
 
-    jsr debug_player
-
     lda config_quit
     beq ?2
     rts
@@ -255,6 +257,7 @@ game_loop nop
     jsr paint_boxes
     jsr renderstart
     jsr pageflip
+    jsr debug_player
     jsr wait
     jmp game_loop
 

@@ -6,10 +6,12 @@ actor_row .ds MAX_ACTORS  ; #  current tile row
 actor_y .ds MAX_ACTORS
 actor_xpixel .ds MAX_ACTORS  ; #  current pixel offset in col
 actor_xfrac .ds MAX_ACTORS  ; #  current fractional pixel
-actor_xspeed .ds MAX_ACTORS  ; #  current speed (affects fractional)
+actor_xspeed_l .ds MAX_ACTORS  ; #  current speed (affects fractional)
+actor_xspeed_h .ds MAX_ACTORS  ; #  current speed (affects pixel)
 actor_ypixel .ds MAX_ACTORS  ; #  current pixel offset in row
 actor_yfrac .ds MAX_ACTORS  ; #  current fractional pixel
-actor_yspeed .ds MAX_ACTORS  ; #  current speed (affects fractional)
+actor_yspeed_l .ds MAX_ACTORS  ; #  current speed (affects fractional)
+actor_yspeed_h .ds MAX_ACTORS  ; #  current speed (affects pixel)
 actor_updown .ds MAX_ACTORS  ; #  preferred direction
 actor_dir .ds MAX_ACTORS  ; #  actual direction
 actor_target_col .ds MAX_ACTORS  ; #  target column at bot or top T

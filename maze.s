@@ -58,7 +58,7 @@ SCREEN_COLS = 40
 
 ;# Orbiter goes around the outside border, but not through the maze
 ORBITER_START_COL = MAZE_RIGHT_COL
-ORBITER_START_ROW = (MAZE_TOP_ROW + MAZE_BOT_ROW) / 2
+ORBITER_START_ROW = 2
 
 ;# Returns address of tile in col 0 of row y
 ;def mazerow(y):

@@ -202,6 +202,85 @@ check_midpoint nop
 ?mid lda #1
     rts
 
+before_midpoint nop
+    lda current
+    and #TILE_UP
+    beq ?down
+    lda actor_ypixel,x
+    cmp #Y_MIDPOINT
+    bcc ?n
+    beq ?n
+    bcs ?y
+?down lda current
+    and #TILE_DOWN
+    beq ?left
+    lda actor_ypixel,x
+    cmp #Y_MIDPOINT
+    bcc ?y
+    bcs ?n
+?left lda current
+    and #TILE_LEFT
+    beq ?right
+    lda actor_xpixel,x
+    cmp #X_MIDPOINT
+    bcc ?n
+    beq ?n
+    bcs ?y
+?right lda current
+    and #TILE_RIGHT
+    beq ?n
+    lda actor_xpixel,x
+    cmp #X_MIDPOINT
+    bcc ?y
+    ;bcs ?n
+?n  lda #0
+    sta crossed
+    rts
+?y  lda #1
+    sta crossed
+    rts
+
+; check if midpoint OR after
+crossed_midpoint nop
+    lda crossed
+    bne ?1
+    rts ; immediately abort if already after midpoint
+?1  lda current
+    and #TILE_UP
+    beq ?down
+    lda actor_ypixel,x
+    cmp #Y_MIDPOINT
+    bcc ?y
+    beq ?y
+    bcs ?n
+?down lda current
+    and #TILE_DOWN
+    beq ?left
+    lda actor_ypixel,x
+    cmp #Y_MIDPOINT
+    bcc ?n
+    bcs ?y
+?left lda current
+    and #TILE_LEFT
+    beq ?right
+    lda actor_xpixel,x
+    cmp #X_MIDPOINT
+    bcc ?y
+    beq ?y
+    bcs ?n
+?right lda current
+    and #TILE_RIGHT
+    beq ?n
+    lda actor_xpixel,x
+    cmp #X_MIDPOINT
+    ; bcc ?n
+    bcs ?y
+?n  lda #0 ; no
+    sta crossed
+    rts
+?y  lda #1 ; yes
+    sta crossed
+    rts
 
 ; # Move enemy given the enemy index
 ; def move_enemy():
@@ -225,24 +304,41 @@ move_enemy nop
 ; 
 ;     # check sub-pixel location to see if we've reached a decision point
 ;     temp = check_midpoint(current)
-    jsr check_midpoint
-    sta tempcheck
+    jsr before_midpoint
 
 ;     pixel_move(current)
     jsr pixel_move
+
+    jsr crossed_midpoint ; save this for later
+    lda crossed
+    beq ?left
+
+;         if check_midpoint(current):
+;             # crossed the midpoint! Make a decision on the next allowed direction
+;             if actor_status[zp.current_actor] == ORBITER_NORMAL:
+;                 decide_orbiter()
+;             else:
+;                 decide_direction()
+    lda actor_type,x
+    cmp #ORBITER_TYPE
+    bne ?dir
+    jsr decide_orbiter
+    jmp ?left
+?dir jsr decide_direction
+
 ;     # check if moved to next tile. pixel fraction stays the same to keep
 ;     # the speed consistent, only the pixel gets adjusted
 ;     if actor_xpixel[zp.current_actor] < 0:
 ;         actor_col[zp.current_actor] -= 1
 ;         actor_xpixel[zp.current_actor] += X_TILEMAX
-    lda actor_xpixel,x
+?left lda actor_xpixel,x
     bpl ?right
     dec actor_col,x
     lda actor_xpixel,x
     clc
     adc #X_TILEMAX
     sta actor_xpixel,x
-    jmp ?mid
+    jmp ?ret
 
 ;     elif actor_xpixel[zp.current_actor] >= X_TILEMAX:
 ;         actor_col[zp.current_actor] += 1
@@ -255,7 +351,7 @@ move_enemy nop
     sec
     sbc #X_TILEMAX
     sta actor_xpixel,x
-    jmp ?mid
+    jmp ?ret
 
 
 
@@ -269,40 +365,20 @@ move_enemy nop
     clc
     adc #Y_TILEMAX
     sta actor_ypixel,x
-    jmp ?mid
+    jmp ?ret
 
 ;     elif actor_ypixel[zp.current_actor] >= Y_TILEMAX:
 ;         actor_row[zp.current_actor] += 1
 ;         actor_ypixel[zp.current_actor] -= Y_TILEMAX
 ?down lda actor_ypixel,x
     cmp #Y_TILEMAX
-    bcc ?mid
+    bcc ?ret
     inc actor_row,x
     lda actor_ypixel,x
     sec
     sbc #Y_TILEMAX
     sta actor_ypixel,x
 
-;     s = "#%d: tile=%d,%d pix=%d,%d frac=%d,%d  " % (zp.current_actor, actor_col[zp.current_actor], actor_row[zp.current_actor], actor_xpixel[zp.current_actor], actor_ypixel[zp.current_actor], actor_xfrac[zp.current_actor], actor_yfrac[zp.current_actor])
-;     logic_log.debug(s)
-;     pad.addstr(0 + zp.current_actor, 40, s)
-;     if not temp:
-?mid lda tempcheck ; check if crossing onto midpoint
-    bne ?ret ; nope, already on midpoint so must have checked last time
-
-    jsr check_midpoint
-    beq ?ret ; nope, still not on midpoint
-;         if check_midpoint(current):
-;             # crossed the midpoint! Make a decision on the next allowed direction
-;             if actor_status[zp.current_actor] == ORBITER_NORMAL:
-;                 decide_orbiter()
-;             else:
-;                 decide_direction()
-    lda actor_type,x
-    cmp #ORBITER_TYPE
-    bne ?dir
-    jmp decide_orbiter
-?dir jmp decide_direction
 ?ret rts
 
 ; 
@@ -319,10 +395,11 @@ pixel_move nop
     bne ?down
     lda actor_yfrac,x
     sec
-    sbc actor_yspeed,x
+    sbc actor_yspeed_l,x
     sta actor_yfrac,x
-    bcs ?ret
-    dec actor_ypixel,x ; haha! Don't have to adjust yfrac because it's only 8 bits!
+    lda actor_ypixel,x
+    sbc actor_yspeed_h,x
+    sta actor_ypixel,x
     rts
 
 ;     elif current & TILE_DOWN:
@@ -334,10 +411,11 @@ pixel_move nop
     bne ?left
     lda actor_yfrac,x
     clc
-    adc actor_yspeed,x
+    adc actor_yspeed_l,x
     sta actor_yfrac,x
-    bcc ?ret
-    inc actor_ypixel,x
+    lda actor_ypixel,x
+    adc actor_yspeed_h,x
+    sta actor_ypixel,x
     rts
 
 ;     elif current & TILE_LEFT:
@@ -349,10 +427,11 @@ pixel_move nop
     bne ?right
     lda actor_xfrac,x
     sec
-    sbc actor_xspeed,x
+    sbc actor_xspeed_l,x
     sta actor_xfrac,x
-    bcs ?ret
-    dec actor_xpixel,x
+    lda actor_xpixel,x
+    sbc actor_xspeed_h,x
+    sta actor_xpixel,x
     rts
 
 ;     elif current & TILE_RIGHT:
@@ -364,10 +443,11 @@ pixel_move nop
     bne ?ret
     lda actor_xfrac,x
     clc
-    adc actor_xspeed,x
+    adc actor_xspeed_l,x
     sta actor_xfrac,x
-    bcc ?ret
-    inc actor_xpixel,x
+    lda actor_xpixel,x
+    adc actor_xspeed_h,x
+    sta actor_xpixel,x
 ?ret rts
 
 
@@ -384,16 +464,22 @@ set_speed nop
     and #TILE_VERT
     beq ?1
     lda #0
-    sta actor_xspeed,x
+    sta actor_xspeed_l,x
+    sta actor_xspeed_h,x
     ldy level
-    lda level_speeds,y
-    sta actor_yspeed,x
+    lda level_speed_l,y
+    sta actor_yspeed_l,x
+    lda level_speed_h,y
+    sta actor_yspeed_h,x
     rts
 ?1  lda #0
-    sta actor_yspeed,x
+    sta actor_yspeed_l,x
+    sta actor_yspeed_h,x
     ldy level
-    lda level_speeds,y
-    sta actor_xspeed,x
+    lda level_speed_l,y
+    sta actor_xspeed_l,x
+    lda level_speed_h,y
+    sta actor_xspeed_h,x
     rts
 
 
@@ -437,10 +523,24 @@ decide_orbiter nop
     beq ?lr
     lda allowed
     and #TILE_HORZ
-    bne ?set
+    beq ?lr
+
+    sta actor_dir,x
+    ; horizontal direction allowed; reset vertical subpixel to be right in the middle
+    lda #Y_MIDPOINT
+    sta actor_ypixel,x
+    lda #0
+    sta actor_yfrac,x
+    jmp set_speed
+
 ?lr lda allowed
     and #TILE_VERT
-?set sta actor_dir,x
+    sta actor_dir,x
+    ; vertial direction allowed; reset horizontal subpixel to be right in the middle
+    lda #X_MIDPOINT
+    sta actor_xpixel,x
+    lda #0
+    sta actor_xfrac,x
     jmp set_speed
 
 

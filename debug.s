@@ -207,6 +207,18 @@ debug_player nop
     jsr printhex
 
     dec scratch_row
+    ldx #FIRST_AMIDAR
+    lda actor_xfrac,x
+    ldx #35
+    ldy scratch_row
+    jsr printhex
+    ldx #FIRST_AMIDAR
+    lda actor_yfrac,x
+    ldx #38
+    ldy scratch_row
+    jsr printhex
+
+    dec scratch_row
     ldx #34
     ldy scratch_row
     lda #'1'

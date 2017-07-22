@@ -1,5 +1,7 @@
 level_enemies .byte 55, 4, 5, 6, 7, 8 ;# level starts counting from 1, so dummy zeroth level info
-level_speeds .byte 255, 200, 210, 220, 230, 240 ;# increment of fractional pixel per game frame
+level_speed_l .byte 255, 200, 210, 220, 230, 240 ;# increment of fractional pixel per game frame
+level_speed_h .byte 2, 2, 2, 2, 2, 2
+;level_speed_h .byte 0, 0, 0, 0, 0, 0
 player_score_row .byte 2, 7, 12, 17
 player_score_l .byte 0, 0, 0, 0
 player_score_h .byte 0, 0, 0, 0
@@ -197,9 +199,11 @@ init_actor nop
     sta actor_ypixel,x
     lda #0
     sta actor_xfrac,x
-    sta actor_xspeed,x
+    sta actor_xspeed_l,x
+    sta actor_xspeed_h,x
     sta actor_yfrac,x
-    sta actor_yspeed,x
+    sta actor_yspeed_l,x
+    sta actor_yspeed_h,x
     sta actor_input_dir,x
     sta actor_frame_counter,x
     sta actor_target_col,x
