@@ -1,5 +1,4 @@
-titlepage jsr wipeclear1
-    jsr wipe2to1 ; copy hidden title page
+titlepage jsr titlewipe
     jsr wait
     jsr wait
     jsr wait
@@ -13,5 +12,5 @@ titlepage jsr wipeclear1
     rts
 
 titlewipe jsr wipeclear1
-    jsr wipe2to1
+    jsr wipe2to1 ; copy hidden title page
     rts

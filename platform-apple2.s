@@ -191,20 +191,6 @@ init_screen_once nop
     lda #0
     sta KBDSTROBE
     sta drawpage
-    sta damageindex1
-    sta damageindex2
-    sta damageptr
-    sta damageptr1
-    sta damageptr2
-    lda #damagepage1
-    sta damageptr+1
-    sta damageptr1+1
-    lda #damagepage2
-    sta damageptr2+1
-    lda #0
-    sta tdamageindex1
-    lda #128
-    sta tdamageindex2
     jsr draw_to_page1
     rts
 

@@ -36,7 +36,7 @@ $(A2)title.hgr: title.png
 $(A2)working-sprite-driver.s: $(SPRITES) fatfont128.dat
 	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o $(A2)working $(SPRITES)
 
-$(A2)working.xex: wipes-null.s main.s constants.s rand.s maze.s $(A2)working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s platform-apple2.s
+$(A2)working.xex: wipes-null.s main.s constants.s rand.s maze.s $(A2)working-sprite-driver.s vars.s debug.s actors.s background.s logic.s platform-apple2.s
 	rm -f $(A2)working.xex
 	echo '.include "main.s"' > $(A2)working.s
 	echo '.include "wipes-null.s"' >> $(A2)working.s
@@ -49,7 +49,7 @@ working.dsk: $(A2)working.xex
 	atrcopy working.dsk boot -b $(A2)working.xex --brun 6000 -f
 	#cp $(A2)working.var /home/rob/.wine/drive_c/applewin/APPLE2E.SYM
 
-$(A2)demo.xex: wipes-demo.s main.s constants.s rand.s maze.s $(A2)working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s platform-apple2.s
+$(A2)demo.xex: wipes-demo.s main.s constants.s rand.s maze.s $(A2)working-sprite-driver.s vars.s debug.s actors.s background.s logic.s platform-apple2.s
 	rm -f $(A2)demo.xex
 	echo '.include "main.s"' > $(A2)demo.s
 	echo '.include "wipes-demo.s"' >> $(A2)demo.s

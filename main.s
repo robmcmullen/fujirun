@@ -143,7 +143,7 @@ over_text .byte "OVER",0
 forever
     jmp forever
 
-init_once
+init_once jsr init_damage
     jsr init_screen_once
     jsr init_actors_once
     rts
@@ -157,8 +157,7 @@ title_screen nop
     sta level
     rts
 
-init_game nop
-    jsr init_level
+init_game jsr init_level
     jsr init_actors
     jsr initbackground
     lda #0
@@ -168,7 +167,7 @@ init_game nop
     sta config_quit
     rts
 
-initbackground nop
+initbackground jsr init_damage
     jsr show_page1
     jsr init_maze
     jsr init_panel
@@ -286,7 +285,6 @@ handle_player nop
 
 
 .include "rand.s"
-.include "screen.s"
 .include "maze.s"
 .include "actors.s"
 .include "logic.s"
