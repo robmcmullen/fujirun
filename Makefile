@@ -1,59 +1,65 @@
 SPRITES = atari-sprite9x11.png apple-sprite9x11.png
 CPSPRITES = apple-sprite9x11.png moldy_burger.png
 TOHGR = tohgr
+A2 = build-apple2/
 
-all: working.dsk demo.dsk
+all: build-apple2 working.dsk demo.dsk
 
-player-missile.hgr: player-missile.png
-	quicksprite.py player-missile.png
+build-apple2:
+	mkdir build-apple2
 
-kansasfest-hackfest.hgr: kansasfest-hackfest.png
-	cp kansasfest-hackfest.png _apple2-kansasfest-hackfest-top.png
-	$(TOHGR) _apple2-kansasfest-hackfest-top.png
-	cp kansasfest-hackfest.png _apple2-kansasfest-hackfest-bot.png
-	quicksprite.py -i bw _apple2-kansasfest-hackfest-bot.png
-	quicksprite.py --merge 96 -o kansasfest-hackfest _apple2-kansasfest-hackfest-top.hgr _apple2-kansasfest-hackfest-bot.hgr
+$(A2)player-missile.hgr: player-missile.png
+	cp player-missile.png $(A2)
+	quicksprite.py $(A2)player-missile.png
 
-partycrasher-software.hgr: partycrasher-software.png
-	cp partycrasher-software.png _apple2-partycrasher-software-top.png
-	$(TOHGR) _apple2-partycrasher-software-top.png
-	cp partycrasher-software.png _apple2-partycrasher-software-bot.png
-	quicksprite.py -i bw _apple2-partycrasher-software-bot.png
-	quicksprite.py --merge 116 -o partycrasher-software _apple2-partycrasher-software-top.hgr _apple2-partycrasher-software-bot.hgr
+$(A2)kansasfest-hackfest.hgr: kansasfest-hackfest.png
+	cp kansasfest-hackfest.png $(A2)kansasfest-hackfest-top.png
+	$(TOHGR) $(A2)kansasfest-hackfest-top.png
+	cp kansasfest-hackfest.png $(A2)kansasfest-hackfest-bot.png
+	quicksprite.py -i bw $(A2)kansasfest-hackfest-bot.png
+	quicksprite.py --merge 96 -o $(A2)kansasfest-hackfest $(A2)kansasfest-hackfest-top.hgr $(A2)kansasfest-hackfest-bot.hgr
 
-title.hgr: title.png
-	cp title.png _apple2-title-top.png
-	$(TOHGR) _apple2-title-top.png
-	cp title.png _apple2-title-bot.png
-	quicksprite.py -i bw _apple2-title-bot.png
-	quicksprite.py --merge 136 167 -o title _apple2-title-top.hgr _apple2-title-bot.hgr
+$(A2)partycrasher-software.hgr: partycrasher-software.png
+	cp partycrasher-software.png $(A2)partycrasher-software-top.png
+	$(TOHGR) $(A2)partycrasher-software-top.png
+	cp partycrasher-software.png $(A2)partycrasher-software-bot.png
+	quicksprite.py -i bw $(A2)partycrasher-software-bot.png
+	quicksprite.py --merge 116 -o $(A2)partycrasher-software $(A2)partycrasher-software-top.hgr $(A2)partycrasher-software-bot.hgr
 
-_apple2-working-sprite-driver.s: $(SPRITES) fatfont128.dat
-	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o _apple2-working $(SPRITES)
+$(A2)title.hgr: title.png
+	cp title.png $(A2)title-top.png
+	$(TOHGR) $(A2)title-top.png
+	cp title.png $(A2)title-bot.png
+	quicksprite.py -i bw $(A2)title-bot.png
+	quicksprite.py --merge 136 167 -o $(A2)title $(A2)title-top.hgr $(A2)title-bot.hgr
 
-_apple2-working.xex: wipes-null.s main.s constants.s rand.s maze.s _apple2-working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s platform-apple2.s
-	rm -f _apple2-working.xex
-	echo '.include "main.s"' > _apple2-working.s
-	echo '.include "wipes-null.s"' >> _apple2-working.s
-	echo '.include "platform-apple2.s"' >> _apple2-working.s
-	atasm -mae -o_apple2-working.xex _apple2-working.s -L_apple2-working.var -g_apple2-working.lst
+$(A2)working-sprite-driver.s: $(SPRITES) fatfont128.dat
+	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o $(A2)working $(SPRITES)
 
-working.dsk: _apple2-working.xex
+$(A2)working.xex: wipes-null.s main.s constants.s rand.s maze.s $(A2)working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s platform-apple2.s
+	rm -f $(A2)working.xex
+	echo '.include "main.s"' > $(A2)working.s
+	echo '.include "wipes-null.s"' >> $(A2)working.s
+	echo '.include "platform-apple2.s"' >> $(A2)working.s
+	echo '.include "$(A2)working-sprite-driver.s"' >> $(A2)working.s
+	atasm -mae -o$(A2)working.xex $(A2)working.s -L$(A2)working.var -g$(A2)working.lst
+
+working.dsk: $(A2)working.xex
 	rm -f working.dsk
-	atrcopy working.dsk boot -b _apple2-working.xex --brun 6000 -f
-	#cp working.var /home/rob/.wine/drive_c/applewin/APPLE2E.SYM
+	atrcopy working.dsk boot -b $(A2)working.xex --brun 6000 -f
+	#cp $(A2)working.var /home/rob/.wine/drive_c/applewin/APPLE2E.SYM
 
-_apple2-demo.xex: wipes-demo.s main.s constants.s rand.s maze.s _apple2-working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s platform-apple2.s
-	rm -f _apple2-demo.xex
-	echo '.include "main.s"' > _apple2-demo.s
-	echo '.include "wipes-demo.s"' >> _apple2-demo.s
-	echo '.include "platform-apple2.s"' >> _apple2-demo.s
-	atasm -mae -o_apple2-demo.xex _apple2-demo.s -L_apple2-demo.var -g_apple2-demo.lst
+$(A2)demo.xex: wipes-demo.s main.s constants.s rand.s maze.s $(A2)working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s platform-apple2.s
+	rm -f $(A2)demo.xex
+	echo '.include "main.s"' > $(A2)demo.s
+	echo '.include "wipes-demo.s"' >> $(A2)demo.s
+	echo '.include "platform-apple2.s"' >> $(A2)demo.s
+	echo '.include "$(A2)working-sprite-driver.s"' >> $(A2)demo.s
+	atasm -mae -o$(A2)demo.xex $(A2)demo.s -L$(A2)demo.var -g$(A2)demo.lst
 
-demo.dsk: _apple2-demo.xex logic.s player-missile.hgr partycrasher-software.hgr kansasfest-hackfest.hgr title.hgr
-	atrcopy demo.dsk boot -d partycrasher-software.hgr@2000 player-missile.hgr@4000 kansasfest-hackfest.hgr@2000 title.hgr@4001 -b _apple2-demo.xex --brun 6000 -f
+demo.dsk: $(A2)demo.xex $(A2)player-missile.hgr $(A2)partycrasher-software.hgr $(A2)kansasfest-hackfest.hgr $(A2)title.hgr
+	atrcopy demo.dsk boot -d $(A2)partycrasher-software.hgr@2000 $(A2)player-missile.hgr@4000 $(A2)kansasfest-hackfest.hgr@2000 $(A2)title.hgr@4001 -b $(A2)demo.xex --brun 6000 -f
 
 clean:
-	rm -f player-missile.hgr player-missile.hgr.png partycrasher-software.hgr kansasfest-hackfest.hgr title.hgr
-	rm -f _apple2-* working.dsk demo.dsk
-	rm -f *.lst *.var
+	rm -rf $(A2)
+	rm -f demo.dsk working.dsk

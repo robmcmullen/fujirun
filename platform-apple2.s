@@ -15,6 +15,7 @@ set_hires bit CLRTEXT     ; start with HGR page 1, full screen
     bit CLRMIXED
     bit TXTPAGE1
     bit SETHIRES
+    rts
 
 ; wait for any key
 any_key lda KBDSTROBE
@@ -132,5 +133,3 @@ debugloop
     dec scratch_count
     bne debugloop
     rts
-
-.include "_apple2-working-sprite-driver.s"
