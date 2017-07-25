@@ -31,4 +31,7 @@ amidar_start_col .ds VPATH_NUM
 round_robin_up  .ds VPATH_NUM
 round_robin_down  .ds VPATH_NUM
 
-box_painting .ds MAX_BOX_PAINTING
+box_painting_c .ds MAX_BOX_PAINTING
+box_painting_r1 .ds MAX_BOX_PAINTING
+box_painting_r2 .ds MAX_BOX_PAINTING
+box_painting_actor .ds MAX_BOX_PAINTING

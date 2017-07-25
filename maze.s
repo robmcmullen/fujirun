@@ -18,8 +18,7 @@ VPATH_NUM = 6
 BOX_WIDTH = 5
 VPATH_COL_SPACING = BOX_WIDTH + 1
 
-NUM_BOX_PAINTING_PARAMS = 4
-MAX_BOX_PAINTING = NUM_BOX_PAINTING_PARAMS * 16
+MAX_BOX_PAINTING = 16
 
 
 ; storage
@@ -382,6 +381,14 @@ level_boxes = $bd00
 init_boxes nop
     lda #0
     sta next_level_box
+    ldx #MAX_BOX_PAINTING
+    lda #0
+?1  sta box_painting_c - 1,x
+    sta box_painting_r1 - 1,x
+    sta box_painting_r2 - 1,x
+    sta box_painting_actor - 1,x
+    dex
+    bne ?1
     rts
 ;
 ;def start_box(r, c):
@@ -568,8 +575,9 @@ mark_box_for_painting nop
 ;    box_log.debug("Marking box, player $%d @ %d,%d -> %d,%d" % (zp.current_actor, r1, c, r2, c + BOX_WIDTH))
 ;    x = 0
 ;    while x < NUM_BOX_PAINTING_PARAMS * 16:
-    ldy #0
-?loop cpy #MAX_BOX_PAINTING
+    ldy #$ff
+?loop iny
+    cpy #MAX_BOX_PAINTING
     bcc ?1
     rts
 ;        if box_painting[x] == 0:
@@ -578,27 +586,15 @@ mark_box_for_painting nop
 ;            box_painting[x + 2] = r2
 ;            box_painting[x + 3] = zp.current_actor
 ;            break
-?1  lda box_painting,y
-    bne ?skip
+?1  lda box_painting_c,y
+    bne ?loop
     inc debug_mark_box
     lda c1
-    sta box_painting,y
-    iny
+    sta box_painting_c,y
     lda r1
-    sta box_painting,y
-    iny
+    sta box_painting_r1,y
     lda r2
-    sta box_painting,y
-    iny
+    sta box_painting_r2,y
     txa ; player number
-    sta box_painting,y
+    sta box_painting_actor,y
     rts
-
-
-;        x += NUM_BOX_PAINTING_PARAMS
-;    pad.addstr(27, 0, "starting box, player @ %d %d,%d -> %d,%d" % (zp.current_actor, r1, c, r2, c + BOX_WIDTH))
-?skip iny
-    iny
-    iny
-    iny
-    bne ?loop ; always

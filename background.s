@@ -27,34 +27,11 @@ check_dots nop
     sta (mazeaddr),y
 
     ; update damage! Needs to update both screens
-    jsr damage_maze
+    jsr damage_char
 
     lda #DOT_SCORE
     jsr add_score
 ?1  rts
-
-
-; update both screens!
-damage_maze nop
-    jsr damage_char
-    rts
-
-
-
-
-;        if box_painting[x] == 0:
-;            box_painting[x] = c
-;            box_painting[x + 1] = r1
-;            box_painting[x + 2] = r2
-;            box_painting[x + 3] = zp.current_actor
-;            break
-    lda c1
-    sta box_painting,y
-    rts
-
-
-;        x += NUM_BOX_PAINTING_PARAMS
-;    pad.addstr(27, 0, "starting box, player @ %d %d,%d -> %d,%d" % (zp.current_actor, r1, c, r2, c + BOX_WIDTH))
 
 
 save_index .byte 0
@@ -72,7 +49,7 @@ paint_boxes nop
     rts
 
 ;         if box_painting[x] > 0:
-?1  lda box_painting,y
+?1  lda box_painting_c,y
     beq ?skip
 ;             c1 = box_painting[x]
 ;             r1 = box_painting[x + 1]
@@ -82,17 +59,11 @@ paint_boxes nop
     inc debug_paint_box
 
     sta c1
-    sty save_index
-    iny
-    lda box_painting,y
+    lda box_painting_r1,y
     sta r1
-    iny
-    lda box_painting,y
+    lda box_painting_r2,y
     sta r2
-    iny
-    lda box_painting,y ; player number
-    iny
-    sty param_index
+    lda box_painting_actor,y ; player number
 ;             box_log.debug("Painting box line, player %d at %d,%d" % (i, r1, c1))
 ;             pad.addstr(30, 0, "painting box line at %d,%d" % (r1, c1))
 ;             addr = screenrow(r1)
@@ -136,24 +107,17 @@ paint_boxes nop
     bcs ?finish
 
 ;             box_painting[x + 1] = r1
-    ldy save_index
-    iny
-    sta box_painting,y
-    bne ?loop
+    ldy param_index
+    sta box_painting_r1,y
+    inc param_index
+    bne ?loop ; always
 
-?finish ldy save_index
+?finish ldy param_index
     lda #0
-    sta box_painting,y
-    beq ?loop
-
-
+    sta box_painting_c,y
 
 ;         x += NUM_BOX_PAINTING_PARAMS
-?skip iny
-    iny
-    iny
-    iny
-    sty param_index
+?skip inc param_index
     bne ?loop ; always
 
 ; 

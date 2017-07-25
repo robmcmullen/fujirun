@@ -178,11 +178,6 @@ forever
 init_once
     jsr init_screen_once
     jsr init_actors_once
-    ldx #MAX_BOX_PAINTING
-    lda #0
-?1  sta box_painting - 1,x
-    dex
-    bne ?1
     rts
 
 clrscr
