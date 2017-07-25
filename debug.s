@@ -7,7 +7,7 @@ debugtext nop
     bne ?1
     rts
 
-
+; print one byte as two hex digits on current drawing screen
 debughex ; A = hex byte, X = column, Y = row; A is clobbered, X&Y are not
     pha
     stx param_x
@@ -30,6 +30,7 @@ debughex ; A = hex byte, X = column, Y = row; A is clobbered, X&Y are not
 
 hexdigit .byte "0123456789ABCDEF"
 
+; copy string to the current drawing screen
 printstr ; X = column, Y = row, scratch_ptr is text (null terminated)
     sty param_y
     ldy #0

@@ -160,10 +160,10 @@ check_restart ldx #34
     sta scratch_ptr
     lda #>over_text
     sta scratch_ptr+1
-    jsr printstr
+    jsr printstr ; prints to back page, so have to flip pages to show
     jsr pageflip
 
-    lda KBDSTROBE
+    lda KBDSTROBE ; any key restarts
 ?1  lda KEYBOARD
     bpl ?1
     lda KBDSTROBE
@@ -244,6 +244,9 @@ game_loop nop
     lda config_quit
     beq ?2
     rts
+
+    ; loop through enemies first so we can check collisions with the
+    ; players as the players are moved
 ?2  lda #FIRST_AMIDAR-1
     sta current_actor
 ?enemy inc current_actor
@@ -268,16 +271,18 @@ game_loop nop
     jsr handle_player
     jmp ?p1
 
+; if any player is still alive, the game continues. Once the last player
+; dies, the countdown timer allows the enemies to continue to move a
+; little while before the game ends
 ?alive lda still_alive
     bne ?draw
     dec countdown_time
     bne ?draw
     rts
 
-;        erase_sprites()
-;        update_background()
-;        draw_actors()
-;        show_screen()
+; main draw loop. Restoring background will overwrite the softsprites
+; so there's no need to erase the sprites some other way. Text damage
+; is also restored before any changes for the upcoming frame are drawn.
 ?draw jsr restorebg_driver
     jsr restoretext
     jsr paint_boxes
