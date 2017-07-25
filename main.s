@@ -3,18 +3,6 @@
 .include "macros.s"
 .include "constants.s"
 
-; os memory map
-KEYBOARD = $c000
-KBDSTROBE = $c010
-CLRTEXT = $c050
-SETTEXT = $c051
-CLRMIXED = $c052
-SETMIXED = $c053
-TXTPAGE1 = $c054
-TXTPAGE2 = $c055
-CLRHIRES = $c056
-SETHIRES = $c057
-
 ; Zero page locations. Using the whole thing because we aren't using any
 ; ROM routines
 
@@ -121,11 +109,7 @@ frame_count .ds 2
 
     *= $6000
 
-start nop
-    bit CLRTEXT     ; start with HGR page 1, full screen
-    bit CLRMIXED
-    bit TXTPAGE1
-    bit SETHIRES
+start jsr set_hires     ; start with HGR page 1, full screen
 
     ;jsr clrscr
     jsr init_once
@@ -150,10 +134,7 @@ check_restart ldx #34
     jsr printstr ; prints to back page, so have to flip pages to show
     jsr pageflip
 
-    lda KBDSTROBE ; any key restarts
-?1  lda KEYBOARD
-    bpl ?1
-    lda KBDSTROBE
+    jsr any_key
     jmp restart
 
 game_text .byte "GAME  ",0
@@ -165,31 +146,6 @@ forever
 init_once
     jsr init_screen_once
     jsr init_actors_once
-    rts
-
-clrscr
-    lda #0
-    sta clr1+1
-    lda #$20
-    sta clr1+2
-clr0
-    lda #$81
-    ldy #0
-clr1
-    sta $ffff,y
-    iny
-    bne clr1
-    inc clr1+2
-    ldx clr1+2
-    cpx #$40
-    bcc clr1
-
-    lda #0
-    ldx #39
-?1  jsr text_put_col ; text page 1
-    jsr text_put_col2 ; text page 2
-    dex
-    bpl ?1
     rts
 
 title_screen nop
@@ -328,89 +284,6 @@ handle_player nop
 
 
 
-
-userinput
-    lda KEYBOARD
-    pha
-    ldx #38
-    ldy #23
-    jsr debughex
-    ldx #0
-    pla
-    bpl input_not_movement ; stop movement of player if no direction input
-
-    ; setting the keyboard strobe causes the key to enter repeat mode if held
-    ; down, which causes a pause after the initial movement. Not setting the
-    ; strobe allows smooth movement from the start, but there's no way to stop
-    ;sta KBDSTROBE
-
-check_up cmp #$8d  ; up arrow
-    beq input_up
-    cmp #$c9  ; I
-    bne check_down
-input_up lda #TILE_UP
-    sta actor_input_dir,x
-    rts
-
-check_down cmp #$af  ; down arrow
-    beq input_down
-    cmp #$d4  ; K
-    bne check_left
-input_down lda #TILE_DOWN
-    sta actor_input_dir,x
-    rts
-
-check_left cmp #$88  ; left arrow
-    beq input_left
-    cmp #$c8  ; J
-    bne check_right
-input_left lda #TILE_LEFT
-    sta actor_input_dir,x
-    rts
-
-check_right cmp #$95  ; right arrow
-    beq input_right
-    cmp #$ce  ; L
-    bne input_not_movement
-input_right lda #TILE_RIGHT
-    sta actor_input_dir,x
-    rts
-
-input_not_movement lda #0
-    sta actor_input_dir,x
-
-check_special cmp #$80 + 32
-    beq input_space
-    cmp #$80 + '.'
-    beq input_period
-    cmp #$80 + 'P'
-    beq input_period
-    rts
-
-input_space
-    jmp debugflipscreens
-
-input_period
-    jsr wait
-    lda KEYBOARD
-    bpl input_period
-    cmp #$80 + 'P'
-    beq input_period
-    rts
-
-debugflipscreens
-    lda #20
-    sta scratch_count
-debugloop
-    jsr pageflip
-    jsr wait
-    jsr pageflip
-    jsr wait
-    dec scratch_count
-    bne debugloop
-    rts
-
-
 wait
     ldy     #$06    ; Loop a bit
 wait_outer
@@ -431,7 +304,6 @@ wait_inner
 
 
 
-.include "working-sprite-driver.s"
 .include "rand.s"
 .include "screen.s"
 .include "maze.s"
