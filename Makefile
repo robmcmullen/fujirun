@@ -1,5 +1,6 @@
 SPRITES = atari-sprite9x11.png apple-sprite9x11.png
 CPSPRITES = apple-sprite9x11.png moldy_burger.png
+TOHGR = tohgr
 
 all: cpbg.dsk titles.dsk working.dsk demo.dsk
 
@@ -17,22 +18,22 @@ player-missile.hgr: player-missile.png
 
 kansasfest-hackfest.hgr: kansasfest-hackfest.png
 	cp kansasfest-hackfest.png tmphgr-kansasfest-hackfest-top.png
-	../tohgr-source/tohgr tmphgr-kansasfest-hackfest-top.png
+	$(TOHGR) tmphgr-kansasfest-hackfest-top.png
 	cp kansasfest-hackfest.png tmphgr-kansasfest-hackfest-bot.png
 	quicksprite.py -i bw tmphgr-kansasfest-hackfest-bot.png
 	quicksprite.py --merge 96 -o kansasfest-hackfest tmphgr-kansasfest-hackfest-top.hgr tmphgr-kansasfest-hackfest-bot.hgr
 
 partycrasher-software.hgr: partycrasher-software.png
 	cp partycrasher-software.png tmphgr-partycrasher-software-top.png
-	../tohgr-source/tohgr tmphgr-partycrasher-software-top.png
+	$(TOHGR) tmphgr-partycrasher-software-top.png
 	cp partycrasher-software.png tmphgr-partycrasher-software-bot.png
 	quicksprite.py -i bw tmphgr-partycrasher-software-bot.png
 	quicksprite.py --merge 116 -o partycrasher-software tmphgr-partycrasher-software-top.hgr tmphgr-partycrasher-software-bot.hgr
 
 title.hgr: title.png
-	#../tohgr-source/tohgr title.png
+	#$(TOHGR) title.png
 	cp title.png tmphgr-title-top.png
-	../tohgr-source/tohgr tmphgr-title-top.png
+	$(TOHGR) tmphgr-title-top.png
 	cp title.png tmphgr-title-bot.png
 	quicksprite.py -i bw tmphgr-title-bot.png
 	quicksprite.py --merge 136 167 -o title tmphgr-title-top.hgr tmphgr-title-bot.hgr
@@ -51,7 +52,7 @@ working.xex: working.s wipes-null.s main.s rand.s maze.s working-sprite-driver.s
 working.dsk: working.xex
 	rm -f working.dsk
 	atrcopy working.dsk boot -b working.xex --brun 6000 -f
-	cp working.var /home/rob/.wine/drive_c/applewin/APPLE2E.SYM
+	#cp working.var /home/rob/.wine/drive_c/applewin/APPLE2E.SYM
 
 demo.xex: demo.s wipes-demo.s main.s rand.s maze.s working-sprite-driver.s vars.s debug.s actors.s background.s screen.s logic.s
 	rm -f demo.xex
