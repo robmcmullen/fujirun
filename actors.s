@@ -285,8 +285,9 @@ init_player nop
     sta player_lives,x
     lda #BONUS_LIFE
     sta player_next_target_score,x
-    lda #0
+    lda #$99
     sta player_score_l
+    sta player_score_m
     sta player_score_h
     rts
 
