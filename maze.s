@@ -17,17 +17,6 @@ player_start_col .byte 255,255,255,255, ; zero players!
     .byte 7, 19, 31, 0,
     .byte 1, 13, 25, 31,
 
-;# Returns address of tile in col 0 of row y
-;def mazerow(y):
-;    return maze[y]
-
-; row in Y
-mazerow lda textrows_l,y
-    sta mazeaddr
-    lda textrows_h,y
-    sta mazeaddr+1
-    rts
-
 ;###### Level creation functions
 
 ;def clear_maze():
@@ -319,9 +308,7 @@ init_maze nop
 ;# 03 X|XXXXX|XXXXX|XXXXX|XXXXX|XXXXX|X_______
 ;# 04 X|XXXXX|XXXXX|XXXXX+-----+XXXXX|X_______
 ;
-NUM_LEVEL_BOX_PARAMS = 3
 ;level_boxes .ds 10*6*NUM_LEVEL_BOX_PARAMS
-level_boxes = $bd00
 
 ;# Box painting will be in hires so this array will become a tracker for the
 ;# hires display. It will need y address, y end address, x byte number. It's

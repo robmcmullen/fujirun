@@ -73,17 +73,6 @@ source_actor_y
 
 source_end .byte $ff
 
-; [i*7-3 for i in range(40)]
-player_col_to_x .byte 0, 3, 10, 17, 24, 31, 38, 45, 52, 59, 66, 73, 80, 87, 94, 101, 108, 115, 122, 129, 136, 143, 150, 157, 164, 171, 178, 185, 192, 199, 206, 213, 220, 227, 234, 241, 248, 248, 248, 248, 248,
-;.byte 0, 4, 11, 18, 25, 32, 39, 46, 53, 60, 67, 74, 81, 88, 95, 102, 109, 116, 123, 130, 137, 144, 151, 158, 165, 172, 179, 186, 193, 200, 207, 214, 221, 228, 235, 242, 249, 249, 249, 249, 249
-
-; [i*8-5 for i in range(24)]
-player_row_to_y .byte 0, 3, 11, 19, 27, 35, 43, 51, 59, 67, 75, 83, 91, 99, 107, 115, 123, 131, 139, 147, 155, 163, 171, 179
-
-
-; defines the zone around the midpoint where the player can change to any direction, not just backtracking.
-x_allowed_turn .byte 0, 0, 1, 1, 1, 0, 0
-y_allowed_turn .byte 0, 0, 1, 1, 1, 0, 0, 0
 ;
 ;# Scores
 ;
@@ -301,7 +290,8 @@ init_player nop
     sta player_score_h
     rts
 
-next_life jsr init_common
+next_life jsr clear_input
+    jsr init_common
     jsr init_player_common
     rts
 

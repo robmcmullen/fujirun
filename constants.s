@@ -3,6 +3,8 @@ STARTING_LIVES = 3
 BONUS_LIFE = 10000
 MAX_LIVES = 8
 
+WIPE_DELAY = 40
+
 ; tile size definition. On apple, it's a 7x8 tile. Atari is 8x8
 X_MIDPOINT = 3
 X_TILEMAX = 7
@@ -23,6 +25,12 @@ AMIDAR_NORMAL = 5
 ORBITER_NORMAL = 6
 GAME_OVER = 255
 
+EXPLODING_TIME = 10
+DEAD_TIME = 10
+REGENERATING_TIME = 120
+END_GAME_TIME = 100
+TITLE_SCREEN_TIME = 100
+
 ; memory map
 ; BF00 - BFFF: damage for page 1
 ; BE00 - BEFF: damage for page 2
@@ -32,6 +40,7 @@ GAME_OVER = 255
 
 DAMAGEPAGE1 = $bf   ; page number of damage list for screen 1
 DAMAGEPAGE2 = $be   ;   "" for screen 2
+LEVEL_BOXES = $bd00
 TEXTDAMAGE = $bc00
 
 ; tiles

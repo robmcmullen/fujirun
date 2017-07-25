@@ -1,9 +1,3 @@
-EXPLODING_TIME = 10
-DEAD_TIME = 10
-REGENERATING_TIME = 120
-END_GAME_TIME = 100
-TITLE_SCREEN_TIME = 100
-
 
 ; def draw_actors():
 ;     zp.current_actor = 0
@@ -78,7 +72,6 @@ evaluate_status nop
     beq ?game_over
 
     jsr next_life
-    sta KBDSTROBE
     lda #PLAYER_REGENERATING
     sta actor_status,x
     lda #REGENERATING_TIME

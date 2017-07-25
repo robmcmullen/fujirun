@@ -284,25 +284,6 @@ handle_player nop
 
 
 
-wait
-    ldy     #$06    ; Loop a bit
-wait_outer
-    ldx     #$ff
-wait_inner
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    dex
-    bne     wait_inner
-    dey
-    bne     wait_outer
-    rts
-
-
 
 .include "rand.s"
 .include "screen.s"
