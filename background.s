@@ -404,18 +404,7 @@ restoretext nop
     sta param_count
     iny
     sty param_index
-
-    ldy param_row
-    lda textrows_h,y
-    sta ?row_smc+2
-    lda textrows_l,y
-    sta ?row_smc+1
-    ldx param_col
-?row_smc lda $ffff,x
-    jsr fastfont
-    inx
-    dec param_count
-    bne ?row_smc
+    jsr fasttiles
     beq ?loop1
 
 

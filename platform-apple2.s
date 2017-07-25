@@ -383,9 +383,11 @@ draw_to_page1 lda #$00
     ; copy addresses for functions that write to one page or the other
     lda #<FASTFONT_H1
     sta fastfont_smc+1
+    sta fasttiles_smc+1
     sta copytexthgr_dest_smc+1
     lda #>FASTFONT_H1
     sta fastfont_smc+2
+    sta fasttiles_smc+2
     sta copytexthgr_dest_smc+2
     rts
 
@@ -413,9 +415,11 @@ draw_to_page2 lda #$60
 
     lda #<FASTFONT_H2
     sta fastfont_smc+1
+    sta fasttiles_smc+1
     sta copytexthgr_dest_smc+1
     lda #>FASTFONT_H2
     sta fastfont_smc+2
+    sta fasttiles_smc+2
     sta copytexthgr_dest_smc+2
     rts
 
@@ -432,3 +436,28 @@ fastfont nop
     bne fastfont_smc
 ?1  lda #12
 fastfont_smc jmp $ffff
+
+; restore a horizontal segment from the text page to the current screen
+; param_col = text column
+; param_row = text screen row
+; param_count = number of characters to copy to hgr screen
+fasttiles ldx param_col
+    ldy param_row
+    lda textrows_h,y
+    sta fasttiles_row_smc+2
+    lda textrows_l,y
+    sta fasttiles_row_smc+1
+fasttiles_row_smc lda $ffff,x
+    cmp #12
+    bne fasttiles_smc
+    txa
+    and #1
+    bne ?1
+    lda #15
+    bne fasttiles_smc
+?1  lda #12
+fasttiles_smc jsr $ffff
+    inx
+    dec param_count
+    bne fasttiles_row_smc
+    rts
