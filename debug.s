@@ -271,3 +271,20 @@ debug_player nop
 ;    jsr debughex
 
     rts
+
+
+rand_test ldx #0
+?1  jsr get_rand_byte
+    sta $2000,x
+    inx
+    bne ?1
+?2  jsr get_rand_spacing
+    sta $2100,x
+    inx
+    bne ?2
+?3  jsr get_rand_col
+    sta $2200,x
+    inx
+    bne ?3
+
+    brk
