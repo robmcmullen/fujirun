@@ -1,6 +1,7 @@
     *= $6000
 
 .include "macros.s"
+.include "constants.s"
 
 ; os memory map
 KEYBOARD = $c000
@@ -108,22 +109,6 @@ round_robin_index .ds 2
 level .ds 1
 last_enemy .ds 1
 
-
-; memory map
-; BF00 - BFFF: damage for page 1
-; BE00 - BEFF: damage for page 2
-; BD00 - BDFF: level box storage
-; BC00 - BCFF: text damage
-; constants
-
-DAMAGEPAGE1 = $bf   ; page number of damage list for screen 1
-DAMAGEPAGE2 = $be   ;   "" for screen 2
-TEXTDAMAGE = $bc00
-MAXPOSX     = 220
-MAXPOSY     = 192 - 16
-
-    *= $80
-
     *= $f0
 debug_a .ds 1
 debug_x .ds 1
@@ -131,6 +116,8 @@ debug_y .ds 1
 debug_last_key .ds 1
 frame_count .ds 2
 
+; other declare storage vars
+.include "vars.s"
 
     *= $6000
 
@@ -452,6 +439,3 @@ wait_inner
 .include "logic.s"
 .include "background.s"
 .include "debug.s"
-
-; vars must be last
-.include "vars.s"

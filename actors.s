@@ -9,18 +9,6 @@ player_score_m .byte 0, 0, 0, 0
 player_score_h .byte 0, 0, 0, 0
 
 
-;# sprites all use the same table. In the sample configuration, sprites 0 - 3
-;# are players, 4 and above are enemies. One is an orbiter enemy, the rest use
-;# amidar movement.
-MAX_PLAYERS = 4
-MAX_AMIDARS = VPATH_NUM + 1  ; # one enemy per vpath + one orbiter
-;MAX_ACTORS = MAX_PLAYERS + MAX_AMIDARS
-MAX_ACTORS = 16
-FIRST_PLAYER = 0
-FIRST_AMIDAR = MAX_PLAYERS
-LAST_PLAYER = FIRST_AMIDAR - 1
-LAST_AMIDAR = LAST_PLAYER + MAX_AMIDARS
-
 PLAYER_TYPE = 0
 ORBITER_TYPE = 1
 AMIDAR_TYPE = 2
@@ -93,27 +81,9 @@ player_col_to_x .byte 0, 3, 10, 17, 24, 31, 38, 45, 52, 59, 66, 73, 80, 87, 94, 
 player_row_to_y .byte 0, 3, 11, 19, 27, 35, 43, 51, 59, 67, 75, 83, 91, 99, 107, 115, 123, 131, 139, 147, 155, 163, 171, 179
 
 
-STARTING_LIVES = 3
-BONUS_LIFE = 10000
-MAX_LIVES = 8
-
-X_MIDPOINT = 3
-X_TILEMAX = 7
-Y_MIDPOINT = 3
-Y_TILEMAX = 8
-
 ; defines the zone around the midpoint where the player can change to any direction, not just backtracking.
 x_allowed_turn .byte 0, 0, 1, 1, 1, 0, 0
 y_allowed_turn .byte 0, 0, 1, 1, 1, 0, 0, 0
-
-NOT_VISIBLE = 0
-PLAYER_DEAD = 1
-PLAYER_ALIVE = 2
-PLAYER_EXPLODING = 3
-PLAYER_REGENERATING = 4
-AMIDAR_NORMAL = 5
-ORBITER_NORMAL = 6
-GAME_OVER = 255
 ;
 ;# Scores
 ;

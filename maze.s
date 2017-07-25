@@ -1,28 +1,3 @@
-; defines
-
-TILE_DOWN = $1
-TILE_UP = $2
-TILE_RIGHT = $4
-TILE_LEFT= $8
-TILE_HORZ = TILE_LEFT|TILE_RIGHT
-TILE_VERT = TILE_UP|TILE_DOWN
-DIR_MASK = $0f
-TILE_DOT = $10
-CLEAR_TILE_DOT = %11101111
-
-LEFT_TILE = TILE_DOT|TILE_RIGHT
-MIDDLE_TILE = TILE_DOT|TILE_LEFT|TILE_RIGHT
-RIGHT_TILE = TILE_DOT|TILE_LEFT
-
-VPATH_NUM = 6
-BOX_WIDTH = 5
-VPATH_COL_SPACING = BOX_WIDTH + 1
-
-MAX_BOX_PAINTING = 16
-
-
-; storage
-
 vpath_cols .byte 1, 7, 13, 19, 25, 31
 vpath_top_tile .byte LEFT_TILE|TILE_DOWN
     .byte MIDDLE_TILE|TILE_DOWN
@@ -41,24 +16,6 @@ player_start_col .byte 255,255,255,255, ; zero players!
     .byte 7, 25, 0, 0,
     .byte 7, 19, 31, 0,
     .byte 1, 13, 25, 31,
-
-MAZE_TOP_ROW = 1
-MAZE_BOT_ROW = 22
-SCREEN_ROWS = 24
-
-;# Screen has cols 0 - 39
-;# cols 0 - 32 are the maze, of which 1 - 31 are actually used
-;#  0 and 32 are border tiles having the value zero
-;# cols 33 - 39 is the score area
-MAZE_LEFT_COL = 1
-MAZE_RIGHT_COL = 31
-MAZE_PANEL_COL = 33
-MAZE_SCORE_COL = 35 ; 5 digits for score
-SCREEN_COLS = 40
-
-;# Orbiter goes around the outside border, but not through the maze
-ORBITER_START_COL = MAZE_RIGHT_COL
-ORBITER_START_ROW = 2
 
 ;# Returns address of tile in col 0 of row y
 ;def mazerow(y):
