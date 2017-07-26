@@ -12,19 +12,16 @@ $(A2)player-missile.hgr: player-missile.png
 	cp player-missile.png $(A2)
 	asmgen.py $(A2)player-missile.png
 
+$(A2)player-missile-2.hgr: player-missile-2.png
+	cp player-missile-2.png $(A2)
+	asmgen.py $(A2)player-missile-2.png
+
 $(A2)kansasfest-hackfest.hgr: kansasfest-hackfest.png
 	cp kansasfest-hackfest.png $(A2)kansasfest-hackfest-top.png
 	$(TOHGR) $(A2)kansasfest-hackfest-top.png
 	cp kansasfest-hackfest.png $(A2)kansasfest-hackfest-bot.png
 	asmgen.py -i bw $(A2)kansasfest-hackfest-bot.png
 	asmgen.py --merge 96 -o $(A2)kansasfest-hackfest $(A2)kansasfest-hackfest-top.hgr $(A2)kansasfest-hackfest-bot.hgr
-
-$(A2)partycrasher-software.hgr: partycrasher-software.png
-	cp partycrasher-software.png $(A2)partycrasher-software-top.png
-	$(TOHGR) $(A2)partycrasher-software-top.png
-	cp partycrasher-software.png $(A2)partycrasher-software-bot.png
-	asmgen.py -i bw $(A2)partycrasher-software-bot.png
-	asmgen.py --merge 116 -o $(A2)partycrasher-software $(A2)partycrasher-software-top.hgr $(A2)partycrasher-software-bot.hgr
 
 $(A2)title.hgr: title.png
 	cp title.png $(A2)title-top.png
@@ -57,8 +54,8 @@ $(A2)demo.xex: wipes-demo.s main.s constants.s rand.s maze.s $(A2)working-sprite
 	echo '.include "$(A2)working-sprite-driver.s"' >> $(A2)demo.s
 	atasm -mae -o$(A2)demo.xex $(A2)demo.s -L$(A2)demo.var -g$(A2)demo.lst
 
-demo.dsk: $(A2)demo.xex $(A2)player-missile.hgr $(A2)partycrasher-software.hgr $(A2)kansasfest-hackfest.hgr $(A2)title.hgr
-	atrcopy demo.dsk boot -d $(A2)partycrasher-software.hgr@2000 $(A2)player-missile.hgr@4000 $(A2)kansasfest-hackfest.hgr@2000 $(A2)title.hgr@4001 -b $(A2)demo.xex --brun 6000 -f
+demo.dsk: $(A2)demo.xex $(A2)player-missile.hgr $(A2)player-missile-2.hgr $(A2)kansasfest-hackfest.hgr $(A2)title.hgr
+	atrcopy demo.dsk boot -d $(A2)player-missile.hgr@2000 $(A2)player-missile-2.hgr@4000 $(A2)kansasfest-hackfest.hgr@2000 $(A2)title.hgr@4001 -b $(A2)demo.xex --brun 6000 -f
 
 clean:
 	rm -rf $(A2)
