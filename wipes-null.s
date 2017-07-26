@@ -1,3 +1,3 @@
 titlepage rts
 
-titlewipe rts
+fastwipe rts

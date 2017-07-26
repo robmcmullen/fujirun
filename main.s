@@ -173,7 +173,7 @@ initbackground jsr init_damage
     jsr init_panel
     jsr titlepage
     jsr copytexthgr  ; page2 becomes the source
-    jsr titlewipe
+    jsr fastwipe
     jsr copy2to1
     rts
 
