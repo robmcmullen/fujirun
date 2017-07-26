@@ -10,31 +10,31 @@ build-apple2:
 
 $(A2)player-missile.hgr: player-missile.png
 	cp player-missile.png $(A2)
-	quicksprite.py $(A2)player-missile.png
+	asmgen.py $(A2)player-missile.png
 
 $(A2)kansasfest-hackfest.hgr: kansasfest-hackfest.png
 	cp kansasfest-hackfest.png $(A2)kansasfest-hackfest-top.png
 	$(TOHGR) $(A2)kansasfest-hackfest-top.png
 	cp kansasfest-hackfest.png $(A2)kansasfest-hackfest-bot.png
-	quicksprite.py -i bw $(A2)kansasfest-hackfest-bot.png
-	quicksprite.py --merge 96 -o $(A2)kansasfest-hackfest $(A2)kansasfest-hackfest-top.hgr $(A2)kansasfest-hackfest-bot.hgr
+	asmgen.py -i bw $(A2)kansasfest-hackfest-bot.png
+	asmgen.py --merge 96 -o $(A2)kansasfest-hackfest $(A2)kansasfest-hackfest-top.hgr $(A2)kansasfest-hackfest-bot.hgr
 
 $(A2)partycrasher-software.hgr: partycrasher-software.png
 	cp partycrasher-software.png $(A2)partycrasher-software-top.png
 	$(TOHGR) $(A2)partycrasher-software-top.png
 	cp partycrasher-software.png $(A2)partycrasher-software-bot.png
-	quicksprite.py -i bw $(A2)partycrasher-software-bot.png
-	quicksprite.py --merge 116 -o $(A2)partycrasher-software $(A2)partycrasher-software-top.hgr $(A2)partycrasher-software-bot.hgr
+	asmgen.py -i bw $(A2)partycrasher-software-bot.png
+	asmgen.py --merge 116 -o $(A2)partycrasher-software $(A2)partycrasher-software-top.hgr $(A2)partycrasher-software-bot.hgr
 
 $(A2)title.hgr: title.png
 	cp title.png $(A2)title-top.png
 	$(TOHGR) $(A2)title-top.png
 	cp title.png $(A2)title-bot.png
-	quicksprite.py -i bw $(A2)title-bot.png
-	quicksprite.py --merge 136 167 -o $(A2)title $(A2)title-top.hgr $(A2)title-bot.hgr
+	asmgen.py -i bw $(A2)title-bot.png
+	asmgen.py --merge 136 167 -o $(A2)title $(A2)title-top.hgr $(A2)title-bot.hgr
 
 $(A2)working-sprite-driver.s: $(SPRITES) fatfont128.dat
-	quicksprite.py -a mac65 -p 6502 -s hgrbw -m -k -d -g -f fatfont128.dat -o $(A2)working $(SPRITES)
+	asmgen.py -a mac65 -p 6502 -s hgrbw --scroll 4 -m -k -d -g -f fatfont128.dat -o $(A2)working $(SPRITES)
 
 $(A2)working.xex: wipes-null.s main.s constants.s rand.s maze.s $(A2)working-sprite-driver.s vars.s debug.s actors.s background.s logic.s platform-apple2.s
 	rm -f $(A2)working.xex
