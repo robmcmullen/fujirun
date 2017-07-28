@@ -45,6 +45,11 @@ tdamageindex .ds 1
 tdamageindex1 .ds 1
 tdamageindex2 .ds 1
 damagestart .ds 1
+src   .ds 2 ; decompression usage
+dst   .ds 2
+end  .ds 2
+count   .ds 2
+delta   .ds 2
  
     *= $0040
 ; global variables for this program
@@ -110,6 +115,20 @@ frame_count .ds 2
     *= $6000
 
 start jsr set_hires     ; start with HGR page 1, full screen
+
+    lda #<TITLE_START
+    sta src
+    lda #>TITLE_START
+    sta src+1
+    lda #<TITLE_END
+    sta end
+    lda #>TITLE_END
+    sta end+1
+    lda #0
+    sta dst
+    lda #$40
+    sta dst+1
+    jsr unpack_lz4
 
     ;jsr clrscr
     jsr init_once
@@ -290,3 +309,4 @@ handle_player nop
 .include "logic.s"
 .include "background.s"
 .include "debug.s"
+.include "lz4.s"
