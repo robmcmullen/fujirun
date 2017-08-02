@@ -16,7 +16,7 @@ param_index .ds 1
 param_count .ds 1
 param_save .ds 1
 
-    *= $0010
+    *= $0080
 ; scratch areas: these may be modified by child subroutines
 scratch_addr  .ds 2
 scratch_ptr   .ds 2
@@ -28,8 +28,8 @@ scratch_count .ds 1
 scratch_col   .ds 1
 scratch_row .ds 1
 
-    *= $0020
-; required variables for HiSprite
+    *= $0090
+; required variables for HiSprite/asmgen
 damageindex   .ds 1
 damageindex1  .ds 1
 damageindex2  .ds 1
@@ -40,7 +40,7 @@ damageptr     .ds 2
 damageptr1    .ds 2
 damageptr2    .ds 2
 
-    *= $0030
+    *= $00a0
 tdamageindex .ds 1
 tdamageindex1 .ds 1
 tdamageindex2 .ds 1
@@ -51,7 +51,7 @@ end  .ds 2
 count   .ds 2
 delta   .ds 2
  
-    *= $0040
+    *= $00b0
 ; global variables for this program
 rendercount   .ds 1
 drawpage      .ds 1      ; pos = page1, neg = page2
@@ -65,7 +65,7 @@ temprow       .ds 1
 tempcol       .ds 1
 tempcheck .ds 1
 
-    *= $0050
+    *= $00c0
 mazeaddr    .ds 2
 next_level_box .ds 1
 box_row_save .ds 1
@@ -77,7 +77,7 @@ frame_count .ds 2
 countdown_time .ds 1
 still_alive .ds 1
 
-    *= $0060
+    *= $00d0
 current_actor .ds 1
 current .ds 1 ; current direction
 last_dir .ds 1
@@ -95,7 +95,7 @@ c2 .ds 1
 size .ds 1
 dot .ds 1
 
-    * = $0070
+    * = $00e0
 before .ds 1
 crossed .ds 1
 round_robin_index .ds 2
@@ -130,21 +130,19 @@ start jsr set_hires     ; start with HGR page 1, full screen
     sta dst+1
     jsr unpack_lz4
 
-    ;jsr clrscr
-    jsr init_once
-
-restart jsr title_screen
+restart jsr init_once
+    jsr title_screen
     jsr init_game
     jsr game_loop
 
-check_restart ldx #34
+check_restart ldx #34 ; x coord on screen for "GAME"
     ldy player_score_row
     lda #<game_text
     sta scratch_ptr
     lda #>game_text
     sta scratch_ptr+1
     jsr printstr
-    ldx #35
+    ldx #35 ; x coordinate for "OVER"
     ldy player_lives_row
     lda #<over_text
     sta scratch_ptr
@@ -196,8 +194,19 @@ initbackground jsr init_damage
     jsr copy2to1
     rts
 
+; main game loop. Rather than optimize things and unroll all this stuff into
+; a single big function, I'm calling a bunch of subroutines in hopes that
+; it is easier to follow.
+;
+; The "actor" is either a player or an enemy, and the actor number is placed
+; in the X register. Subroutines must save the X register and restore it
+; upon return if they modify it.
+;
+; All of the game logic routines expect the player/enemy number in X as they
+; use it as an index into whatever specific data they need, like position or
+; direction.
 game_loop nop
-    inc frame_count
+    inc frame_count ; frame count isn't used for anything other than debugging
     bne ?1
     inc frame_count+1
 ?1  jsr userinput
@@ -234,7 +243,8 @@ game_loop nop
 
 ; if any player is still alive, the game continues. Once the last player
 ; dies, the countdown timer allows the enemies to continue to move a
-; little while before the game ends
+; little while before the game ends. Returning from the game loop means
+; that the game is over.
 ?alive lda still_alive
     bne ?draw
     dec countdown_time
@@ -254,8 +264,7 @@ game_loop nop
     jmp game_loop
 
 
-
-
+; updates the game state based on player status changes
 handle_player nop
 ;            if actor_status[zp.current_actor] == PLAYER_REGENERATING:
 ;                # If regenerating, change to alive if the player starts to move
@@ -283,7 +292,6 @@ handle_player nop
 ;                # only check for points if still alive
 ;                check_dots()
 ;                check_boxes()
-
 ?dots lda actor_status,x
     cmp #PLAYER_ALIVE
     bne ?final
@@ -293,7 +301,6 @@ handle_player nop
 ;            if actor_status[zp.current_actor] != GAME_OVER:
 ;                still_alive += 1
 ;            zp.current_actor += 1
-
 ?final lda actor_status,x
     cmp #GAME_OVER
     beq ?end

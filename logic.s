@@ -1,51 +1,4 @@
-
-; def draw_actors():
-;     zp.current_actor = 0
-;     while zp.current_actor <= zp.last_enemy:
-;         r = actor_row[zp.current_actor]
-;         c = actor_col[zp.current_actor]
-;         get_sprite()
-;         draw_sprite(r, c)
-;         zp.current_actor += 1
-; 
-; def get_sprite():
-;     a = actor_status[zp.current_actor]
-;     if a == PLAYER_ALIVE:
-;         c = ord("$") + zp.current_actor
-;     elif a == PLAYER_EXPLODING:
-;         collision_log.debug("p%d: exploding, frame=%d" % (zp.current_actor, actor_frame_counter[zp.current_actor]))
-;         c = ord(exploding_char[actor_frame_counter[zp.current_actor]])
-;         actor_frame_counter[zp.current_actor] -= 1
-;         if actor_frame_counter[zp.current_actor] <= 0:
-;             actor_status[zp.current_actor] = PLAYER_DEAD
-;             actor_frame_counter[zp.current_actor] = DEAD_TIME
-;     elif a == PLAYER_DEAD:
-;         collision_log.debug("p%d: dead, waiting=%d" % (zp.current_actor, actor_frame_counter[zp.current_actor]))
-;         c = None
-;         actor_frame_counter[zp.current_actor] -= 1
-;         if actor_frame_counter[zp.current_actor] <= 0:
-;             player_lives[zp.current_actor] -= 1
-;             if player_lives[zp.current_actor] > 0:
-;                 init_player()
-;                 actor_status[zp.current_actor] = PLAYER_REGENERATING
-;                 actor_frame_counter[zp.current_actor] = REGENERATING_TIME
-;             else:
-;                 actor_status[zp.current_actor] = GAME_OVER
-;     elif a == PLAYER_REGENERATING:
-;         collision_log.debug("p%d: regenerating, frame=%d" % (zp.current_actor, actor_frame_counter[zp.current_actor]))
-;         if actor_frame_counter[zp.current_actor] & 1:
-;             c = ord("$") + zp.current_actor
-;         else:
-;             c = ord(" ")
-;         actor_frame_counter[zp.current_actor] -= 1
-;         if actor_frame_counter[zp.current_actor] <= 0:
-;             actor_status[zp.current_actor] = PLAYER_ALIVE
-;     elif a == AMIDAR_NORMAL or a == ORBITER_NORMAL:
-;         c = ord("0") + zp.current_actor - FIRST_AMIDAR
-;     else:
-;         c = None
-;     zp.sprite_addr = c
-
+; check the player and change its state if necessary
 evaluate_status nop
 ; update pixel position
     lda actor_status,x
@@ -100,7 +53,7 @@ evaluate_status nop
     sta actor_status,x
 ?end rts
 
-
+; convert tile and sub-tile position into coordinate on screen
 get_sprite nop
     lda actor_row,x
     tay
@@ -114,17 +67,10 @@ get_sprite nop
     clc
     adc actor_xpixel,x
     sta actor_x,x
-
 ?end
     rts
 
-?game_over
-    rts
 
-; 
-; 
-; ##### Game logic
-; 
 ; # Determine which of the 4 directions is allowed at the given row, col
 ; def get_allowed_dirs(r, c):
 ;     addr = mazerow(r)
@@ -140,7 +86,6 @@ get_allowed_dirs nop
     rts
 
 
-
 ; # See if current tile has a dot
 ; def has_dot(r, c):
 ;     addr = mazerow(r)
@@ -154,11 +99,6 @@ has_dot nop
     rts
 
 
-; # clear a dot
-; def clear_dot(r, c):
-;     addr = mazerow(r)
-;     addr[c] &= ~TILE_DOT
-; 
 ; # Determine the tile location given the direction of the actor's movement
 ; def get_next_tile(r, c, dir):
 ;     if dir & TILE_UP:
@@ -270,7 +210,8 @@ get_target_col nop
     rts
 ;     actor_target_col[zp.current_actor] = target_col
 ;     return current
-; 
+
+
 ; def check_midpoint(current):
 ;     # set up decision point flag to see if we have crossed the midpoint
 ;     # after the movement

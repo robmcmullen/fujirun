@@ -5,6 +5,14 @@ Fujirun
 My (winning!) entry in the `KansasFest <https://www.kansasfest.org/>`_ 2017 `HackFest <https://www.kansasfest.org/hackfest/>`_ competition.
 
 
+Code Walkthrough
+================
+
+TBD
+
+* any place you see the "_smc" extension, that's a target for self-modifying code. Got that from Quinn Dunki.
+
+
 References
 ==========
 

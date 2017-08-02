@@ -1,7 +1,7 @@
 level_enemies .byte 55, 4, 5, 6, 7, 8 ;# level starts counting from 1, so dummy zeroth level info
 level_speed_l .byte 255, 200, 210, 220, 230, 240 ;# increment of fractional pixel per game frame
-level_speed_h .byte 2, 2, 2, 2, 2, 2
-;level_speed_h .byte 0, 0, 0, 0, 0, 0
+level_speed_h .byte 2, 2, 2, 2, 2, 2 ; increment of whole pixels
+
 player_score_row .byte 2, 7, 12, 17
 player_lives_row .byte 3, 8, 13, 18
 player_score_l .byte 0, 0, 0, 0

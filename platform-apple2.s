@@ -78,7 +78,7 @@ input_up lda #TILE_UP
 
 check_down cmp #$af  ; down arrow
     beq input_down
-    cmp #$bb  ; ';' key (dvorak keyboards)
+    cmp #$bb  ; ';' key (dvorak keyboards!)
     beq input_down
     cmp #$da  ; 'Z' key
     beq input_down
@@ -159,6 +159,9 @@ wait_inner  ; inner loop: 14 + 2 + 3
     bne wait_outer
     rts
 
+; Offsets in pixels from upper left corner of sprite to where it should
+; appear on screen given the tile coords of where the game logic thinks
+; the sprite is.
 
 ; [i*7-3 for i in range(40)]
 player_col_to_x .byte 0, 3, 10, 17, 24, 31, 38, 45, 52, 59, 66, 73, 80, 87, 94, 101, 108, 115, 122, 129, 136, 143, 150, 157, 164, 171, 178, 185, 192, 199, 206, 213, 220, 227, 234, 241, 248, 248, 248, 248, 248,
@@ -168,15 +171,14 @@ player_col_to_x .byte 0, 3, 10, 17, 24, 31, 38, 45, 52, 59, 66, 73, 80, 87, 94, 
 player_row_to_y .byte 0, 3, 11, 19, 27, 35, 43, 51, 59, 67, 75, 83, 91, 99, 107, 115, 123, 131, 139, 147, 155, 163, 171, 179
 
 
-; defines the zone around the midpoint where the player can change to any direction, not just backtracking.
+; defines the zone around the midpoint where the player can change to any
+; direction, not just backtracking. On the apple, there are 7 x positions but
+; 8 y positions
 x_allowed_turn .byte 0, 0, 1, 1, 1, 0, 0
 y_allowed_turn .byte 0, 0, 1, 1, 1, 0, 0, 0
 
 
-;# Returns address of tile in col 0 of row y
-;def mazerow(y):
-;    return maze[y]
-
+; Returns address of tile in col 0 of row y
 ; row in Y
 mazerow lda textrows_l,y
     sta mazeaddr
@@ -185,8 +187,7 @@ mazerow lda textrows_l,y
     rts
 
 
-; text & hgr screen utils
-
+; initialize screen to draw to page 1 (displays page 2)
 init_screen_once nop
     lda #0
     sta KBDSTROBE
@@ -195,6 +196,8 @@ init_screen_once nop
     rts
 
 
+; set an entire column (24 rows) of the HGR screen to the specified character
+; on page 1
 ; character in A, col in X
 text_put_col nop
     sta $0400,x ; row 0
@@ -223,6 +226,7 @@ text_put_col nop
     sta $07d0,x ; row 23
     rts
 
+; ditto except for page 2
 text_put_col2 nop
     sta $0800,x ; row 0
     sta $0880,x ; row 1
@@ -259,6 +263,8 @@ textrows_h .byte $04, $04, $05, $05, $06, $06, $07, $07
         .byte $04, $04, $05, $05, $06, $06, $07, $07
 
 
+; sets HGR page 1 to all white using a vertical wipe starting from the
+; top moving down
 wipeclear1 ldy #0
     sty param_y
 wipeclear1_loop lda HGRROWS_L,y
@@ -285,6 +291,9 @@ wipeclear1_wait nop
     bcc wipeclear1_loop
     rts
 
+
+; sets HGR page 1 to the contents of page 2 using a vertical wipe starting
+; from the top moving down
 wipe2to1 ldy #0
     sty param_y
 wipe2to1_loop lda HGRROWS_H2,y
@@ -314,6 +323,8 @@ wipe2to1_wait nop
     bcc wipe2to1_loop
     rts
 
+
+; simple (slow, non-optimized) copy of the data from HGR page 2 to HGR page 1
 copy2to1 lda #$40
     sta ?source+2
     lda #$20
@@ -331,6 +342,9 @@ copy2to1 lda #$40
     rts
 
 
+; copy the entire text screen to the current HGR page. The dest_smc address
+; is set in the pageflip routine below so they always point to the page
+; in back, not the page currently being shown.
 copytexthgr nop
     ldy #0      ; y is rows
 copytexthgr_outer
@@ -353,6 +367,8 @@ copytexthgr_dest_smc
     rts
 
 
+; change pages based on the state of the drawpage variable. drawpage == 0
+; is page 1, drawpage == $80 is page 2
 pageflip nop
     lda drawpage
     eor #$80
