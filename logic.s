@@ -222,147 +222,63 @@ get_target_col nop
 ;     return current
 
 
-; def check_midpoint(current):
-;     # set up decision point flag to see if we have crossed the midpoint
-;     # after the movement
-;     if current & TILE_VERT:
-;         sub = actor_ypixel[zp.current_actor]
-;         return sub == Y_MIDPOINT
-;     else:
-;         sub = actor_xpixel[zp.current_actor]
-;         return sub == X_MIDPOINT
-check_midpoint nop
-    lda current
-    and #TILE_VERT
-    beq ?lr
-    lda actor_ypixel,x
-    cmp #Y_MIDPOINT
-    beq ?mid
-?no lda #0
-    rts
-?lr lda actor_xpixel,x
-    cmp #X_MIDPOINT
-    bne ?no
-?mid lda #1
-    rts
-
-before_midpoint nop
-    lda current
+; based on the current direction of travel, return 0 if on midpoint or after
+; or 1 if before midpoint
+before_midpoint lda current
     and #TILE_UP
     beq ?down
     lda actor_ypixel,x
     cmp #Y_MIDPOINT
-    bcc ?n
-    beq ?n
-    bcs ?y
+    bcc ?after
+    beq ?after
+    bcs ?before
 ?down lda current
     and #TILE_DOWN
     beq ?left
     lda actor_ypixel,x
     cmp #Y_MIDPOINT
-    bcc ?y
-    bcs ?n
+    bcc ?before
+    bcs ?after
 ?left lda current
     and #TILE_LEFT
     beq ?right
     lda actor_xpixel,x
     cmp #X_MIDPOINT
-    bcc ?n
-    beq ?n
-    bcs ?y
+    bcc ?after
+    beq ?after
+    bcs ?before
 ?right lda current
     and #TILE_RIGHT
-    beq ?n
+    beq ?after
     lda actor_xpixel,x
     cmp #X_MIDPOINT
-    bcc ?y
+    bcc ?before
     ;bcs ?n
-?n  lda #0
-    sta crossed
+?after lda #0
     rts
-?y  lda #1
-    sta crossed
+?before lda #1
     rts
 
-; check if midpoint OR after
-crossed_midpoint nop
-    lda crossed
-    bne ?1
-    rts ; immediately abort if already after midpoint
-?1  lda current
-    and #TILE_UP
-    beq ?down
-    lda actor_ypixel,x
-    cmp #Y_MIDPOINT
-    bcc ?y
-    beq ?y
-    bcs ?n
-?down lda current
-    and #TILE_DOWN
-    beq ?left
-    lda actor_ypixel,x
-    cmp #Y_MIDPOINT
-    bcc ?n
-    bcs ?y
-?left lda current
-    and #TILE_LEFT
-    beq ?right
-    lda actor_xpixel,x
-    cmp #X_MIDPOINT
-    bcc ?y
-    beq ?y
-    bcs ?n
-?right lda current
-    and #TILE_RIGHT
-    beq ?n
-    lda actor_xpixel,x
-    cmp #X_MIDPOINT
-    ; bcc ?n
-    bcs ?y
-?n  lda #0 ; no
-    sta crossed
-    rts
-?y  lda #1 ; yes
-    sta crossed
-    rts
 
-; # Move enemy given the enemy index
-; def move_enemy():
+; Move enemy given the enemy index
 move_enemy nop
-;     current = actor_dir[zp.current_actor]
     lda actor_dir,x
     sta current
 
-;    lda actor_row,x
-;    clc
-;    adc #1
-;    and #$0f
-;    sta actor_row,x
-;    lda actor_col,x
-;    clc
-;    adc #1
-;    and #$0f
-;    sta actor_col,x
-
-
-; 
-;     # check sub-pixel location to see if we've reached a decision point
-;     temp = check_midpoint(current)
+; check sub-tile location to see if we've reached a decision point
     jsr before_midpoint
+    sta before
 
-;     pixel_move(current)
-    jsr pixel_move
+    jsr pixel_move ; attempt to move in the current direction
 
-    jsr crossed_midpoint ; save this for later
-    lda crossed
-    beq move_tile
+    lda before
+    beq move_tile ; if it's already after the midpoint, just move it
 
-;         if check_midpoint(current):
-;             # crossed the midpoint! Make a decision on the next allowed direction
-;             if actor_status[zp.current_actor] == ORBITER_NORMAL:
-;                 decide_orbiter()
-;             else:
-;                 decide_direction()
+; ok, before the pixel move it was before the midpoint.
+    jsr before_midpoint
+    bne move_tile ; it's still before the midpoint: it hasn't crossed
+
+; crossed the midpoint! Make a decision on the next allowed direction
     lda actor_type,x
     cmp #ORBITER_TYPE
     bne ?dir
