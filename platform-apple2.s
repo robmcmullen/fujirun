@@ -187,6 +187,18 @@ mazerow lda textrows_l,y
     rts
 
 
+; clear text page 2 where most of the variables are stored
+init_vars ldx #0
+    txa
+?1  sta $800,x
+    sta $900,x
+    sta $a00,x
+    sta $b00,x
+    dex
+    bne ?1
+    rts
+
+
 ; initialize screen to draw to page 1 (displays page 2)
 init_screen_once nop
     lda #0

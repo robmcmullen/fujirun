@@ -160,7 +160,8 @@ over_text .byte "OVER",0
 forever
     jmp forever
 
-init_once jsr init_damage
+init_once jsr init_vars
+    jsr init_damage
     jsr init_screen_once
     jsr init_actors_once
     rts

@@ -2,12 +2,12 @@
 
 actor_col .ds MAX_ACTORS  ; #  current tile column
 actor_x .ds MAX_ACTORS  ; pixel position (calculated from col & xpixel)
-actor_row .ds MAX_ACTORS  ; #  current tile row
-actor_y .ds MAX_ACTORS  ; pixel position (calculated from row & ypixel)
 actor_xpixel .ds MAX_ACTORS  ; #  current pixel offset in col
 actor_xfrac .ds MAX_ACTORS  ; #  current fractional pixel
 actor_xspeed_l .ds MAX_ACTORS  ; #  current speed (affects fractional)
 actor_xspeed_h .ds MAX_ACTORS  ; #  current speed (affects pixel)
+actor_row .ds MAX_ACTORS  ; #  current tile row
+actor_y .ds MAX_ACTORS  ; pixel position (calculated from row & ypixel)
 actor_ypixel .ds MAX_ACTORS  ; #  current pixel offset in row
 actor_yfrac .ds MAX_ACTORS  ; #  current fractional pixel
 actor_yspeed_l .ds MAX_ACTORS  ; #  current speed (affects fractional)
