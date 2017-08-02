@@ -56,13 +56,23 @@ evaluate_status nop
 ; convert tile and sub-tile position into coordinate on screen
 get_sprite nop
     lda actor_row,x
-    tay
+.if DEBUG_BOUNDS
+    cmp #24
+    bcc ?1
+    jsr debug_bounds
+.endif
+?1  tay
     lda player_row_to_y,y
     clc
     adc actor_ypixel,x
     sta actor_y,x
     lda actor_col,x
-    tay
+.if DEBUG_BOUNDS
+    cmp #40
+    bcc ?2
+    jsr debug_bounds
+.endif
+?2  tay
     lda player_col_to_x,y
     clc
     adc actor_xpixel,x
@@ -369,7 +379,13 @@ move_tile nop
 ?left lda actor_xpixel,x
     bpl ?right
     dec actor_col,x
-    lda actor_xpixel,x
+.if DEBUG_BOUNDS
+    lda actor_col,x
+    cmp #MAZE_LEFT_COL
+    bcs ?1b
+    jsr error_bounds
+.endif
+?1b lda actor_xpixel,x
     clc
     adc #X_TILEMAX
     sta actor_xpixel,x
@@ -382,7 +398,13 @@ move_tile nop
     cmp #X_TILEMAX
     bcc ?up
     inc actor_col,x
-    lda actor_xpixel,x
+.if DEBUG_BOUNDS
+    lda actor_col,x
+    cmp #MAZE_RIGHT_COL+1
+    bcc ?2b
+    jsr error_bounds
+.endif
+?2b lda actor_xpixel,x
     sec
     sbc #X_TILEMAX
     sta actor_xpixel,x
@@ -396,7 +418,13 @@ move_tile nop
 ?up lda actor_ypixel,x
     bpl ?down
     dec actor_row,x
-    lda actor_ypixel,x
+.if DEBUG_BOUNDS
+    lda actor_row,x
+    cmp #MAZE_TOP_ROW
+    bcs ?3b
+    jsr error_bounds
+.endif
+?3b lda actor_ypixel,x
     clc
     adc #Y_TILEMAX
     sta actor_ypixel,x
@@ -409,7 +437,13 @@ move_tile nop
     cmp #Y_TILEMAX
     bcc ?ret
     inc actor_row,x
-    lda actor_ypixel,x
+.if DEBUG_BOUNDS
+    lda actor_row,x
+    cmp #MAZE_BOT_ROW+1
+    bcc ?4b
+    jsr error_bounds
+.endif
+?4b lda actor_ypixel,x
     sec
     sbc #Y_TILEMAX
     sta actor_ypixel,x

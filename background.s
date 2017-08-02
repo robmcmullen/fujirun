@@ -327,12 +327,23 @@ restorebg_cont lda (damageptr),y ; groups of 4 x1 -> x2, y1 -> y2
 
     ldy param_y
 restorebg_row lda textrows_h,y
+.if DEBUG_BOUNDS
+    cpy #24
+    bcc ?1
+    jsr debug_bounds
+.endif
+?1  lda textrows_h,y
     sta restorebg_row_smc+2
     lda textrows_l,y
     sta restorebg_row_smc+1
     ldx param_x
 restorebg_row_smc lda $ffff,x
-    jsr fastfont
+.if DEBUG_BOUNDS
+    cpx #40
+    bcc ?1
+    jsr debug_bounds
+.endif
+?1  jsr fastfont
     inx
     cpx param_col
     bcc restorebg_row_smc

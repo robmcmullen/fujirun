@@ -45,6 +45,122 @@ printstr ; X = column, Y = row, scratch_ptr is text (null terminated)
     bne ?next
 ?exit rts
 
+error_bounds_text .byte "BOUNDS", 0
+
+; debug function to display address near where the problem was found.
+; By calling using a JSR, the return address is available on the stack
+error_bounds nop
+    lda #9
+    sta scratch_row
+
+    ldx #34 ; x coord on screen for "BOUNDS"
+    ldy scratch_row
+    lda #<error_bounds_text
+    sta scratch_ptr
+    lda #>error_bounds_text
+    sta scratch_ptr+1
+    jsr printstr
+
+    inc scratch_row
+    pla
+    ldx #38
+    ldy scratch_row
+    jsr debughex
+    pla
+    ldx #36
+    ldy scratch_row
+    jsr debughex
+
+    inc scratch_row
+    lda current_actor
+    ldx #38
+    ldy scratch_row
+    jsr debughex
+
+    inc scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'x'
+    jsr fastfont
+    ldx current_actor
+    lda actor_x,x
+    ldx #35
+    ldy scratch_row
+    jsr debughex
+    ldx current_actor
+    lda actor_y,x
+    ldx #38
+    ldy scratch_row
+    jsr debughex
+
+    inc scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'c'
+    jsr fastfont
+    ldx current_actor
+    lda actor_col,x
+    ldx #35
+    ldy scratch_row
+    jsr debughex
+    ldx current_actor
+    lda actor_row,x
+    ldx #38
+    ldy scratch_row
+    jsr debughex
+
+    inc scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'p'
+    jsr fastfont
+    ldx current_actor
+    lda actor_xpixel,x
+    ldx #35
+    ldy scratch_row
+    jsr debughex
+    ldx current_actor
+    lda actor_ypixel,x
+    ldx #38
+    ldy scratch_row
+    jsr debughex
+
+    inc scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'.'
+    jsr fastfont
+    ldx current_actor
+    lda actor_xfrac,x
+    ldx #35
+    ldy scratch_row
+    jsr debughex
+    ldx current_actor
+    lda actor_yfrac,x
+    ldx #38
+    ldy scratch_row
+    jsr debughex
+
+    inc scratch_row
+    ldx #34
+    ldy scratch_row
+    lda #'d'
+    jsr fastfont
+    ldx current_actor
+    lda actor_dir,x
+    ldx #35
+    ldy scratch_row
+    jsr debughex
+    ldx current_actor
+    lda actor_target_col,x
+    ldx #38
+    ldy scratch_row
+    jsr debughex
+
+    jsr pageflip
+    ldx current_actor ; restore X register
+?1  jmp ?1 ; wait for debugger
+
 
 debug_damage .byte 0
 debug_paint_box .byte 0

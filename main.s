@@ -1,5 +1,10 @@
     *= $6000
 
+; conditional compilation flags
+
+DEBUG_BOUNDS = 1
+
+
 .include "macros.s"
 .include "constants.s"
 
