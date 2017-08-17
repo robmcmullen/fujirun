@@ -1,14 +1,9 @@
 titlepage jsr FASTSCROLL_4000_2000
-    jsr wait
-    jsr wait
-    jsr wait
-    jsr wait
-    jsr wait
-    jsr wait
-    jsr wait
-    jsr wait
-    jsr wait
-    jsr wait
+    lda #$50
+    sta param_count
+?1  jsr wait
+    dec param_count
+    bne ?1
     rts
 
 fastwipe jsr wipeclear1
