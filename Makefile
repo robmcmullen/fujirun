@@ -2,7 +2,7 @@ SPRITES = atari-sprite9x11.png apple-sprite9x11.png
 TOHGR = tohgr
 A2 = build-apple2/
 
-all: working.dsk demo.dsk
+all: working.dsk fujirun.dsk
 
 build-apple2:
 	mkdir build-apple2
@@ -57,18 +57,18 @@ working.dsk: build-apple2 $(A2)working.xex
 	atrcopy working.dsk boot -b $(A2)working.xex --brun 6000 -f
 	#cp $(A2)working.var /home/rob/.wine/drive_c/applewin/APPLE2E.SYM
 
-$(A2)demo.xex: wipes-demo.s main.s constants.s rand.s maze.s $(A2)working-sprite-driver.s vars.s debug.s actors.s background.s logic.s platform-apple2.s lz4.s
-	rm -f $(A2)demo.xex
-	echo '.include "main.s"' > $(A2)demo.s
-	echo '.include "wipes-demo.s"' >> $(A2)demo.s
-	echo '.include "platform-apple2.s"' >> $(A2)demo.s
-	echo '.include "$(A2)working-sprite-driver.s"' >> $(A2)demo.s
-	echo '.include "$(A2)title.s"' >> $(A2)demo.s
-	atasm -mae -o$(A2)demo.xex $(A2)demo.s -L$(A2)demo.var -g$(A2)demo.lst
+$(A2)fujirun.xex: wipes-demo.s main.s constants.s rand.s maze.s $(A2)working-sprite-driver.s vars.s debug.s actors.s background.s logic.s platform-apple2.s lz4.s
+	rm -f $(A2)fujirun.xex
+	echo '.include "main.s"' > $(A2)fujirun.s
+	echo '.include "wipes-demo.s"' >> $(A2)fujirun.s
+	echo '.include "platform-apple2.s"' >> $(A2)fujirun.s
+	echo '.include "$(A2)working-sprite-driver.s"' >> $(A2)fujirun.s
+	echo '.include "$(A2)title.s"' >> $(A2)fujirun.s
+	atasm -mae -o$(A2)fujirun.xex $(A2)fujirun.s -L$(A2)fujirun.var -g$(A2)fujirun.lst
 
-demo.dsk: build-apple2 $(A2)demo.xex player-missile.hgr player-missile-2.hgr kansasfest-hackfest.hgr title.hgr
-	atrcopy demo.dsk boot -d player-missile.hgr@2000 player-missile-2.hgr@4000 kansasfest-hackfest.hgr@2000 -b $(A2)demo.xex --brun 6000 -f
+fujirun.dsk: build-apple2 $(A2)fujirun.xex player-missile.hgr player-missile-2.hgr kansasfest-hackfest.hgr title.hgr
+	atrcopy fujirun.dsk boot -d player-missile.hgr@2000 player-missile-2.hgr@4000 kansasfest-hackfest.hgr@2000 -b $(A2)fujirun.xex --brun 6000 -f
 
 clean:
 	rm -rf $(A2)
-	rm -f demo.dsk working.dsk
+	rm -f fujirun.dsk working.dsk
