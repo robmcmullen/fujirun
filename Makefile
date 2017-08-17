@@ -1,8 +1,9 @@
 SPRITES = atari-sprite9x11.png apple-sprite9x11.png
 TOHGR = tohgr
 A2 = build-apple2/
+VERSION = -v1
 
-all: working.dsk fujirun.dsk
+all: working.dsk fujirun$(VERSION).dsk
 
 build-apple2:
 	mkdir build-apple2
@@ -66,9 +67,9 @@ $(A2)fujirun.xex: wipes-demo.s main.s constants.s rand.s maze.s $(A2)working-spr
 	echo '.include "$(A2)title.s"' >> $(A2)fujirun.s
 	atasm -mae -o$(A2)fujirun.xex $(A2)fujirun.s -L$(A2)fujirun.var -g$(A2)fujirun.lst
 
-fujirun.dsk: build-apple2 $(A2)fujirun.xex player-missile.hgr player-missile-2.hgr kansasfest-hackfest.hgr title.hgr
-	atrcopy fujirun.dsk boot -d player-missile.hgr@2000 player-missile-2.hgr@4000 kansasfest-hackfest.hgr@2000 -b $(A2)fujirun.xex --brun 6000 -f
+fujirun$(VERSION).dsk: build-apple2 $(A2)fujirun.xex player-missile.hgr player-missile-2.hgr kansasfest-hackfest.hgr title.hgr
+	atrcopy fujirun$(VERSION).dsk boot -d player-missile.hgr@2000 player-missile-2.hgr@4000 kansasfest-hackfest.hgr@2000 -b $(A2)fujirun.xex --brun 6000 -f
 
 clean:
 	rm -rf $(A2)
-	rm -f fujirun.dsk working.dsk
+	rm -f fujirun$(VERSION).dsk working.dsk
