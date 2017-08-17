@@ -70,10 +70,21 @@ game. At this point, nothing happens when completing the maze. I ran out of time
 I am planning on adding:
 
 * actually moving on to the next level when you complete a level
+* some sort of effect when the player gets caught by a booatari.
 * multiple levels
 * sound
 * two player simultaneous play
 * an Atari 8-bit port
+
+Bugs
+----
+
+By design, the "pac-man" bug is present so the player and an amidar can pass
+through each other if they happen to exchange grid squares in a single turn. In
+practice this happens more often than I thought it would, so I'll have to
+readdress this.
+
+After you lose all your lives and restart (by pressing any key), the amidars will work correctly until they get to the bottom, after which one will continue going down after the bottom row and stomp all over memory and crash. I still haven't been able to debug this.
 
 
 Code Walkthrough
