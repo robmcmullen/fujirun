@@ -108,6 +108,27 @@ Source files
 * ``rand.s`` - random number generator and utilities
 * ``vars.s`` - uninitialized variable declarations
 
+Resource files
+--------------
+
+* ``apple-sprite9x11.png`` - your plucky hero
+* ``atari-sprite9x11.png`` - did somebody say boo?
+* ``fatfont128.dat`` - modification of Michael Pohoreski's font from his `HGR tutorial <https://github.com/Michaelangel007/apple2_hgr_font_tutorial>`_ to change a few text characters and add the maze tiles
+* ``kansasfest-hackfest.png`` - source for 3rd title card
+* ``kansasfest-hackfest.hgr`` - conversion to HGR binary data using tohgr and asmgen
+* ``player-missile-2.png`` - source for 2nd title card
+* ``player-missile-2.hgr`` - conversion to HGR binary data using asmgen
+* ``player-missile.png`` - source for 1st title card
+* ``player-missile.hgr`` - conversion to HGR binary data using asmgen
+* ``title.xcf`` - GIMP source image for title screen (4th title card upon load)
+* ``title.png`` - source for HGR conversion
+* ``title.hgr`` - conversion to HGR binary data using tohgr and asmgen
+
+Prototyping
+-----------
+
+* ``mazegen.py`` - python, curses based prototyping code for developing maze algorithm and enemy logic
+
 Notes
 -----
 
