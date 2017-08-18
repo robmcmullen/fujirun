@@ -11,7 +11,7 @@ Running
 Fujirun is written for an Apple ][+ with 48K of memory.
 
 A pre-built disk image is included, so no need to reassemble the code unless
-you are changing something. Use your favorite Apple II emulator to boot the disk image ``demo.dsk``.
+you are changing something. Use your favorite Apple II emulator to boot the disk image ``fujirun-v1.dsk``.
 
 
 Building
@@ -23,16 +23,13 @@ To build from the assembly source, you will need the following programs:
 * `ATasm <http://atari.miribilist.com/atasm/>`_, which, while ostensibly an *Atari* macro assembler, produces generic 6502 code and can be used on any 6502 machine
 * `lz4 <https://lz4.github.io/lz4/>`_, a compression program suitable for fast decompression on the 6502
 
-For Python, you will need these additional packages
+For Python, you will need these additional packages:
 
 * `atrcopy <https://github.com/robmcmullen/atrcopy>`_, my disk image utility
 * `asmgen <https://github.com/robmcmullen/asmgen>`_, my 6502 code generation utility
 
-which are available through pip, so once Python is installed use:
+which are available through pip. Once Python is installed, use: ``pip install atrcopy asmgen``.
 
-``
-pip install atrcopy asmgen
-``
 
 Gameplay
 ========
@@ -84,11 +81,14 @@ through each other if they happen to exchange grid squares in a single turn. In
 practice this happens more often than I thought it would, so I'll have to
 readdress this.
 
-After you lose all your lives and restart (by pressing any key), the amidars will work correctly until they get to the bottom, after which one will continue going down after the bottom row and stomp all over memory and crash. I still haven't been able to debug this.
+After you lose all your lives and restart (by pressing any key), the amidars
+will work correctly until they get to the bottom, after which one will continue
+going down after the bottom row and stomp all over memory and crash. I still
+haven't been able to debug this.
 
 
-Code Walkthrough
-================
+Code Organization
+=================
 
 Source files
 ------------
@@ -129,9 +129,21 @@ Prototyping
 
 * ``mazegen.py`` - python, curses based prototyping code for developing maze algorithm and enemy logic
 
+
+Code Walkthrough
+================
+
+
 Notes
 -----
 
+* the graphics for the maze are tile-based, 7x8 tiles
+* the maze is generated in text page 1 and copied to the HGR screens
+* text page 1 is used as the reference for what should be drawn to or changed on the HGR screens
+* page flipping is used
+* the asmgen sprite compiler can be told to use damage, which reports back information about which bytes have changed when drawing the sprite
+* the damage reported is actually text row/col so the fast font routine can copy the tiles over the damaged area
+* players/amidars (actors) position is based the centers of each sprite, but location is tracked using the corresponding row/col in the text page and the pixel location within each tile
 * any place you see the "_smc" extension, that's a target for self-modifying code. Got that from Quinn Dunki.
 
 
