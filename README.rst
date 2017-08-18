@@ -4,6 +4,14 @@ Fujirun
 
 My (winning!) entry in the `KansasFest <https://www.kansasfest.org/>`_ 2017 `HackFest <https://www.kansasfest.org/hackfest/>`_ competition.
 
+.. image:: https://playermissile.com/_images/fujirun_title_card3.png
+   :align: center
+
+.. image:: https://playermissile.com/_images/fujirun_title_screen.png
+   :align: center
+
+.. image:: https://playermissile.com/_images/fujirun_gameplay.png
+   :align: center
 
 Running
 =======
