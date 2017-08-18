@@ -31,7 +31,7 @@ title.hgr: title.png
 	$(TOHGR) $(A2)title-top.png
 	cp title.png $(A2)title-bot.png
 	asmgen.py -i bw $(A2)title-bot.png
-	asmgen.py --merge 136 167 -o $(A2)title $(A2)title-top.hgr $(A2)title-bot.hgr
+	asmgen.py --merge 136 -o $(A2)title $(A2)title-top.hgr $(A2)title-bot.hgr
 	cp $(A2)title.hgr title.hgr
 
 $(A2)title.s: title.hgr
@@ -73,3 +73,6 @@ fujirun$(VERSION).dsk: build-apple2 $(A2)fujirun.xex player-missile.hgr player-m
 clean:
 	rm -rf $(A2)
 	rm -f fujirun$(VERSION).dsk working.dsk
+
+reallyclean: clean
+	rm -f player-missile.hgr player-missile-2.hgr kansasfest-hackfest.hgr title.hgr
