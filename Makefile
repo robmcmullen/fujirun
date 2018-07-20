@@ -3,7 +3,7 @@ TOHGR = tohgr
 A2 = build-apple2/
 VERSION = -v1
 
-all: working.dsk fujirun$(VERSION).dsk
+all: working.dsk working.bin fujirun$(VERSION).dsk
 
 build-apple2:
 	mkdir build-apple2
@@ -41,15 +41,15 @@ $(A2)title.s: title.hgr
 	tail -c +9 $(A2)title.lz4 > $(A2)title.lz4-payload
 	asmgen.py -a mac65 --src $(A2)title.lz4-payload -n title > $(A2)title.s
 
-$(A2)working-sprite-driver.s: $(SPRITES) fatfont128.dat
+$(A2)working-asmgen-driver.s: $(SPRITES) fatfont128.dat
 	asmgen.py -a mac65 -p 6502 -s hgrbw --scroll 4 -m -k -d -g -f fatfont128.dat -o $(A2)working $(SPRITES)
 
-$(A2)working.xex: wipes-null.s main.s constants.s rand.s maze.s $(A2)working-sprite-driver.s $(A2)title.s vars.s debug.s actors.s background.s logic.s platform-apple2.s lz4.s
+$(A2)working.xex: wipes-null.s main.s constants.s rand.s maze.s $(A2)working-asmgen-driver.s $(A2)title.s vars.s debug.s actors.s background.s logic.s platform-apple2.s lz4.s
 	rm -f $(A2)working.xex
 	echo '.include "main.s"' > $(A2)working.s
 	echo '.include "wipes-null.s"' >> $(A2)working.s
 	echo '.include "platform-apple2.s"' >> $(A2)working.s
-	echo '.include "$(A2)working-sprite-driver.s"' >> $(A2)working.s
+	echo '.include "$(A2)working-asmgen-driver.s"' >> $(A2)working.s
 	echo '.include "$(A2)title.s"' >> $(A2)working.s
 	atasm -mae -o$(A2)working.xex $(A2)working.s -L$(A2)working.var -g$(A2)working.lst
 
@@ -58,12 +58,16 @@ working.dsk: build-apple2 $(A2)working.xex
 	atrcopy working.dsk boot -b $(A2)working.xex --brun 6000 -f
 	#cp $(A2)working.var /home/rob/.wine/drive_c/applewin/APPLE2E.SYM
 
-$(A2)fujirun.xex: wipes-demo.s main.s constants.s rand.s maze.s $(A2)working-sprite-driver.s vars.s debug.s actors.s background.s logic.s platform-apple2.s lz4.s
+working.bin: build-apple2 $(A2)working.xex
+	rm -f working.bin
+	atrcopy . assemble -b $(A2)working.xex -f -o working.bin
+
+$(A2)fujirun.xex: wipes-demo.s main.s constants.s rand.s maze.s $(A2)working-asmgen-driver.s vars.s debug.s actors.s background.s logic.s platform-apple2.s lz4.s
 	rm -f $(A2)fujirun.xex
 	echo '.include "main.s"' > $(A2)fujirun.s
 	echo '.include "wipes-demo.s"' >> $(A2)fujirun.s
 	echo '.include "platform-apple2.s"' >> $(A2)fujirun.s
-	echo '.include "$(A2)working-sprite-driver.s"' >> $(A2)fujirun.s
+	echo '.include "$(A2)working-asmgen-driver.s"' >> $(A2)fujirun.s
 	echo '.include "$(A2)title.s"' >> $(A2)fujirun.s
 	atasm -mae -o$(A2)fujirun.xex $(A2)fujirun.s -L$(A2)fujirun.var -g$(A2)fujirun.lst
 
