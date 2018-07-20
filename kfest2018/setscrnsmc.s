@@ -58,18 +58,17 @@ set_text bit SETTEXT
 page
 ; set hires page 1 only
     lda #$20
-    sta hgr_ptr+1
-    lda #0
-    sta hgr_ptr
-    tay
+    sta setscr_smc+2
     lda frame_count
-setscr sta (hgr_ptr),y
-    iny
-    bne setscr
-    inc hgr_ptr+1
-    ldx hgr_ptr+1
-    cpx #$40
-    bcc setscr
-    rts
+    ldy #0
+    lda #$ff
+setscr_smc sta $ff00,y      ; 4
+    iny                     ; 2
+    bne setscr_smc          ; 4 = 10 * 256
+    inc setscr_smc+2        ; 6
+    ldx setscr_smc+2        ; 6
+    cpx #$40                ; 2
+    bcc setscr_smc          ; 4
+    rts                     ; (18 + 10*256) * 32 = 82496
 
     brk
