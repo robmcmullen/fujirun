@@ -68,6 +68,8 @@ userinput lda KEYBOARD
 
 check_up cmp #$8d  ; up arrow
     beq input_up
+    cmp #$8b  ; up arrow IIe
+    beq input_up
     cmp #$c1  ; 'A' key
     beq input_up
     cmp #$c9  ; I
@@ -77,6 +79,8 @@ input_up lda #TILE_UP
     rts
 
 check_down cmp #$af  ; down arrow
+    beq input_down
+    cmp #$8a  ; down arrow IIe
     beq input_down
     cmp #$bb  ; ';' key (dvorak keyboards!)
     beq input_down
