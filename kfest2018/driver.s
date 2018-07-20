@@ -1,8 +1,14 @@
+    *= $00bf
 
-FIRST_CHAR_OF_SCREEN = $06
-FIRST_CHAR_OF_LINE = $07
-CURRENT_CHAR = $08
-FRAME_COUNT = $09
+FIRST_CHAR_OF_SCREEN .ds 1
+FIRST_CHAR_OF_LINE .ds 1
+CURRENT_CHAR .ds 1
+FRAME_COUNT .ds 1
+hgr_ptr .ds 2
+font_ptr .ds 2
+scratch_0 .ds 1
+scratch_x .ds 1
+scratch_y .ds 1
 
 
     *= $5000

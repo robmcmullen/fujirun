@@ -9,7 +9,6 @@
 ; this file for any purpose. (The code generator itself is licensed under the
 ; GPLv3.)
 
-SCRATCH_0 = $D0
 
 FASTFONT_H1	; A = character, X = column, Y = row; A is clobbered, X&Y are not
 	pha

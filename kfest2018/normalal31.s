@@ -1,9 +1,4 @@
 
-SCRATCH_X = $D0
-SCRATCH_Y = $D1
-FONT_PTR = $D2
-HGR_PTR = $D4
-
 FATFONT = $6000
 
 ; A = character, X = column, Y = row; A is clobbered, X&Y are not

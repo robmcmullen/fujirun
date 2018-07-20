@@ -1,4 +1,4 @@
-TARGETS = INSANECLEAR.BIN FASTEST.BIN SETSCRN.BIN NORMAL.BIN NORMALSMC.BIN FASTCLEAR.BIN NORMALINCFONT.BIN NORMALAL31.BIN SETSCRNSMC.BIN
+TARGETS = INSANECLEAR.BIN FASTEST.BIN SETSCRN.BIN NORMAL.BIN NORMALSMC.BIN FASTCLEAR.BIN NORMALINCFONT.BIN NORMALAL31.BIN SETSCRNSMC.BIN COMPILED.BIN
 
 all: $(TARGETS)
 
@@ -6,6 +6,13 @@ kfest.dsk:
 	atrcopy kfest.dsk create dos33.dsk
 	atrcopy kfest.dsk add TEST.BAS
 	atrcopy kfest.dsk add FONT.DAT
+
+COMPILED.BIN: driver.s fontcompiled.s
+	rm -f $@
+	cat $^ > temp.s
+	atrcopy . assemble -f -s temp.s -r 0x5000 -o $@
+	atrcopy kfest.dsk add $@ -f
+	rm -f apple2auto.state
 
 FASTEST.BIN: driver.s fastfont.s
 	rm -f $@
