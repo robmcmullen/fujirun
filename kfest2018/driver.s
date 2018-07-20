@@ -1,11 +1,15 @@
-    *= $00bf
+    *= $0006
 
 FIRST_CHAR_OF_SCREEN .ds 1
 FIRST_CHAR_OF_LINE .ds 1
 CURRENT_CHAR .ds 1
 FRAME_COUNT .ds 1
+
+    *= $00eb
 hgr_ptr .ds 2
 font_ptr .ds 2
+
+    *= $00fa
 scratch_0 .ds 1
 scratch_x .ds 1
 scratch_y .ds 1
