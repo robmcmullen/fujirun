@@ -460,13 +460,14 @@ draw_to_page2 lda #$60
 ; image with tile 15 when necessary
 fastfont nop
     cmp #12
-    bne fastfont_smc
+    bne ?2
     txa
     and #1
     bne ?1
     lda #15
-    bne fastfont_smc
+    bne ?2
 ?1  lda #12
+?2  and #ACTOR_FLAG_MASK
 fastfont_smc jmp $ffff
 
 ; restore a horizontal segment from the text page to the current screen
@@ -481,13 +482,14 @@ fasttiles ldx param_col
     sta fasttiles_row_smc+1
 fasttiles_row_smc lda $ffff,x
     cmp #12
-    bne fasttiles_smc
+    bne ?2
     txa
     and #1
     bne ?1
     lda #15
-    bne fasttiles_smc
+    bne ?2
 ?1  lda #12
+?2  and #ACTOR_FLAG_MASK
 fasttiles_smc jsr $ffff
     inx
     dec param_count

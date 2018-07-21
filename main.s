@@ -230,7 +230,9 @@ game_loop nop
     lda actor_active,x
     bmi ?player ; negative = end
     beq ?enemy ; zero = skip
+    jsr clear_actor_flag
     jsr move_enemy
+    jsr set_actor_flag
     jmp ?enemy
 
 ?player lda #0

@@ -108,6 +108,28 @@ has_dot nop
     and #TILE_DOT
     rts
 
+clear_actor_flag nop
+    lda actor_row,x
+    tay
+    jsr mazerow
+    lda actor_col,x
+    tay
+    lda (mazeaddr),y
+    and #ACTOR_FLAG_MASK
+    sta (mazeaddr),y
+    rts
+
+set_actor_flag nop
+    lda actor_row,x
+    tay
+    jsr mazerow
+    lda actor_col,x
+    tay
+    lda (mazeaddr),y
+    ora #ACTOR_FLAG
+    sta (mazeaddr),y
+    rts
+
 
 ; # Determine the tile location given the direction of the actor's movement
 ; def get_next_tile(r, c, dir):
